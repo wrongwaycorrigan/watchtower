@@ -114,8 +114,13 @@ function upsertVessel(mmsi, updates) {
   if (!Number.isFinite(v.lat) || !Number.isFinite(v.lon)) return;
 
   const country = countryForMmsi(mmsi);
-  const flag = country ? `${flagEmoji(country)} ` : '';
-  const label = flag + (v.name || `MMSI ${mmsi}`);
+  // Cesium labels are drawn into a canvas texture, not real HTML - flag
+  // emoji (two combined regional-indicator characters) render unreliably
+  // there across platforms, often as nothing at all. A plain country code
+  // is font-independent and always shows; the popup below still gets the
+  // real flag emoji since that's normal HTML rendering.
+  const countryTag = country ? `[${country}] ` : '';
+  const label = countryTag + (v.name || `MMSI ${mmsi}`);
   const headingDeg = Number.isFinite(v.cog) ? v.cog : 0;
   const position = Cesium.Cartesian3.fromDegrees(v.lon, v.lat);
   const hpr = new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(headingDeg), 0, 0);
