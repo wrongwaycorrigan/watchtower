@@ -4,6 +4,7 @@ import * as radiosondes from './layers/radiosondes.js';
 import * as radio from './layers/radio.js';
 import * as traffic from './layers/traffic.js';
 import * as ports from './layers/ports.js';
+import * as ais from './layers/ais.js';
 import * as weatherBadge from './layers/weatherBadge.js';
 import * as moonBadge from './layers/moonBadge.js';
 import * as iss from './layers/iss.js';
@@ -39,6 +40,7 @@ const LAYERS = {
   'radio-panel': radio,
   'traffic-panel': traffic,
   'ports-panel': ports,
+  'ais-panel': ais,
 };
 
 let buildingTileset = null;
@@ -81,6 +83,7 @@ async function initCesium() {
   radio.init(viewer);
   traffic.init(viewer);
   ports.init(viewer);
+  ais.init(viewer);
   weatherBadge.init();
   iss.init(viewer);
 

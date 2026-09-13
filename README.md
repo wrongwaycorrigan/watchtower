@@ -7,8 +7,10 @@ overlays several live data layers on top.
 ## Layers
 
 - 3D Buildings: Japan PLATEAU (MLIT) textured building models
-- Radio: streaming radio stations plus WSPR propagation data
+- Radio: streaming radio stations, WSPR propagation data, and curated
+  amateur repeater site locations
 - Air Traffic: aircraft positions from a local receiver (tar1090)
+- Ship Traffic: live vessel positions from aisstream.io (AIS)
 - Tokyo Bay Ports: curated port locations (static, no live feed)
 - Radiosondes: weather balloon positions from SondeHub
 - Weather: precipitation radar from RainViewer
@@ -24,14 +26,16 @@ This project has no build step. It runs directly as static files.
 1. Get a Cesium Ion access token from https://ion.cesium.com
 2. In your Cesium Ion account, add the Sentinel-2 imagery asset and the
    Japan 3D Buildings asset (asset ID 2602291) to your account.
-3. Copy the example config file and add your token:
+3. Get a free AIS Stream API key from https://aisstream.io for the Ship
+   Traffic layer.
+4. Copy the example config file and add your tokens:
 
    cp config.example.js config.js
 
-   Edit config.js and replace the placeholder with your real token.
-   config.js is listed in .gitignore, so your token is not committed.
+   Edit config.js and replace the placeholders with your real tokens.
+   config.js is listed in .gitignore, so your tokens are not committed.
 
-4. Serve the directory with any static file server and open index.html
+5. Serve the directory with any static file server and open index.html
    in a browser. For example:
 
    python3 -m http.server 8000
