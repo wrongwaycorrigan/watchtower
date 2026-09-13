@@ -1,0 +1,18 @@
+Aircraft model used by layers/traffic.js.
+
+Source: Cesium_Air.glb, from CesiumGS/cesium's own sample data
+(Apps/SampleData/models/CesiumAir/Cesium_Air.glb), used across many of
+Cesium's official Sandcastle demos as a generic aircraft placeholder.
+Self-contained - textures are embedded in the .glb, no external files
+needed (unlike ship-models/, which needs its Textures/colormap.png).
+
+License: Apache License 2.0, same as CesiumJS itself - this file isn't
+separately listed under CesiumGS/cesium's LICENSE.md "third-party" section,
+so it's covered by the project's own Apache-2.0 license rather than a more
+restrictive one. See https://github.com/CesiumGS/cesium/blob/main/LICENSE.md.
+
+Every aircraft in the Air Traffic layer uses this one model, tinted by
+altitude band (see LOW_ALT_COLOR/HIGH_ALT_COLOR in traffic.js) rather than
+picked from a per-type library - no verified CC0 "cute" low-poly aircraft
+kit with real category variety (airliner, prop, jet, ...) was found, the
+way ship-models/ has one from Kenney's Watercraft Kit.
