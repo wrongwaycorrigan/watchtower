@@ -51,9 +51,7 @@ async function refresh() {
 
   const url = `${WSPR_LIVE_URL}?query=${encodeURIComponent(buildQuery())}`;
   try {
-    console.log('[WSPR] requesting:', url);
     const res = await fetch(url);
-    console.log('[WSPR] response status:', res.status);
     if (!res.ok) {
       const bodyText = await res.text().catch(() => '(could not read body)');
       console.warn('[WSPR] non-OK response, body was:', bodyText);
@@ -61,7 +59,6 @@ async function refresh() {
     }
     const body = await res.json();
     const rows = body.data ?? [];
-    console.log('[WSPR] spots in response:', rows.length);
 
     _dataSource.entities.removeAll();
     for (const row of rows) {

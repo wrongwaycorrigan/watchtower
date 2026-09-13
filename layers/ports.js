@@ -23,16 +23,13 @@
 // Port terminal coordinates are approximate placements, not survey-grade.
 // Tide station coordinates come from TidesAtlas's database.
 //
-// Tide stations are rendered as a little Kenney rowboat (not a flat dot)
-// tinted by live sea surface temperature - blue when cold, orange when
-// warm - and sized up a bit for rougher wave conditions, via the Open-
-// Meteo Marine API (marine-api.open-meteo.com, separate from the regular
-// forecast API weather.js/weatherBadge.js already use successfully).
-// That subdomain is unreachable from this dev environment same as
-// several other APIs this session, so the request shape below is built
-// from Open-Meteo's well-established, consistent API convention rather
-// than a directly confirmed response - diagnostic logging is left in on
-// purpose, same as wspr.js/traffic.js for their own first real tests.
+// Tide stations are rendered as a little Kenney houseboat (not a flat
+// dot) tinted by live sea surface temperature - blue when cold, orange
+// when warm - and sized up a bit for rougher wave conditions, via the
+// Open-Meteo Marine API (marine-api.open-meteo.com, separate from the
+// regular forecast API weather.js/weatherBadge.js already use). Confirmed
+// working against the real feed - field names match Open-Meteo's usual
+// convention exactly.
 
 import * as ais from './ais.js';
 
@@ -180,10 +177,8 @@ async function refreshStationConditions(station, entity) {
       timezone: 'auto',
     });
     const res = await fetch(`${MARINE_URL}?${params}`);
-    console.log('[Ports/Marine] response status:', res.status, station.name);
     if (!res.ok) return;
     const data = await res.json();
-    console.log('[Ports/Marine] DIAGNOSTIC - raw current for', station.name, ':', data.current);
     const c = data.current;
     if (!c) return;
 

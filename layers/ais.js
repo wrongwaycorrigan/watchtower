@@ -171,16 +171,11 @@ function upsertVessel(mmsi, updates) {
   }
 }
 
-// Diagnostic counters/logging: the message schema below was sourced from
-// third-party mirrors of aisstream.io's docs (their own docs site is
-// unreachable from this dev environment), so it's unconfirmed against a
-// real feed. Logging the first few raw messages in full, plus running
-// counts, makes a field-name mismatch immediately visible in the console
-// instead of failing silently - same diagnostic-logging approach already
-// used in traffic.js and wspr.js for their own first real tests.
-let _rawMessageCount = 0;
-const RAW_LOG_LIMIT = 5;
-
+// Message schema confirmed against the real feed (aisstream.io's own docs
+// site was unreachable from this dev environment, so this was originally
+// built from third-party mirrors) - PositionReport/ShipStaticData parse
+// correctly, and SubscriptionConfirmation (no MetaData.MMSI) is expected
+// and silently skipped, not an error.
 function handleMessage(raw) {
   let msg;
   try {
@@ -190,18 +185,8 @@ function handleMessage(raw) {
     return;
   }
 
-  _rawMessageCount += 1;
-  if (_rawMessageCount <= RAW_LOG_LIMIT) {
-    console.log(`[AIS] raw message #${_rawMessageCount}:`, msg);
-  }
-
   const mmsi = msg.MetaData?.MMSI;
-  if (mmsi == null) {
-    if (_rawMessageCount <= RAW_LOG_LIMIT) {
-      console.warn('[AIS] message had no MetaData.MMSI, skipping:', msg);
-    }
-    return;
-  }
+  if (mmsi == null) return;
 
   if (msg.MessageType === 'PositionReport') {
     const pr = msg.Message?.PositionReport;
@@ -214,10 +199,6 @@ function handleMessage(raw) {
     if (sd.Name) updates.name = sd.Name.trim();
     if (Number.isFinite(sd.Type)) updates.shipType = sd.Type;
     if (Object.keys(updates).length) upsertVessel(mmsi, updates);
-  }
-
-  if (_rawMessageCount % 50 === 0) {
-    console.log(`[AIS] ${_rawMessageCount} messages received, ${_vessels.size} vessels tracked`);
   }
 }
 
