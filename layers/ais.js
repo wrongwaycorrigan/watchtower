@@ -161,6 +161,10 @@ function upsertVessel(mmsi, updates) {
         pixelOffset: new Cesium.Cartesian2(0, -16),
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
         scaleByDistance: new Cesium.NearFarScalar(5_000, 1.0, 100_000, 0.4),
+        // Names only show up close - with a boat this small on the map,
+        // labels at typical zoomed-out distances are just clutter, and
+        // this needs no dock button/toggle to control it.
+        distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, 6000.0),
       },
       description,
     });
