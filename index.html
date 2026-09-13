@@ -27,31 +27,25 @@
   <!-- Control panels (hidden by default) -->
   <div id="buildings-layer" class="control-panel hidden">
     <strong>3D Buildings</strong>
-    <p class="source">Japan PLATEAU (MLIT)</p>
   </div>
   <div id="radio-panel" class="control-panel hidden">
     <strong>Radio</strong>
-    <p class="source">radio-browser.info + wspr.live + curated repeater sites</p>
     <p class="count" id="radio-count">0</p>
   </div>
   <div id="traffic-panel" class="control-panel hidden">
     <strong>Air Traffic</strong>
-    <p class="source">Local receiver (tar1090)</p>
     <p class="count" id="traffic-count">0</p>
   </div>
   <div id="ports-panel" class="control-panel hidden">
     <strong>Tokyo Bay Ports</strong>
-    <p class="source">Curated ports/tides + aisstream.io ship traffic</p>
     <p class="count" id="ports-count">0</p>
   </div>
   <div id="sonde-panel" class="control-panel hidden">
     <strong>Radiosondes</strong>
-    <p class="source">SondeHub</p>
     <p class="count" id="sonde-count">0</p>
   </div>
   <div id="weather-panel" class="control-panel hidden">
     <strong>Weather</strong>
-    <p class="source">RainViewer</p>
   </div>
   <div id="disaster-panel" class="control-panel hidden">
     <strong>Disasters</strong>
@@ -81,8 +75,8 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --panel-bg: rgba(255, 252, 248, 0.96);
-      --panel-shadow: 0 10px 30px rgba(40, 30, 20, 0.18);
+      --panel-bg: rgba(255, 252, 248, 0.55);
+      --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
       --text-primary: #3a332c;
       --text-secondary: #8a8074;
       --accent: #3ddc97;
@@ -104,8 +98,8 @@
       left: 50%;
       transform: translateX(-50%);
       background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
       border-radius: 999px;
       padding: 10px 14px;
       display: flex;
@@ -157,8 +151,8 @@
       left: 24px;
       transition: top 0.2s ease;
       background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
       border-radius: 20px;
       padding: 20px;
       min-width: 230px;
@@ -175,11 +169,6 @@
       margin-bottom: 4px;
       font-size: 15px;
       font-weight: 600;
-    }
-
-    .control-panel .source {
-      font-size: 11.5px;
-      color: var(--text-secondary);
     }
 
     .control-panel .count {
@@ -213,8 +202,8 @@
       bottom: 24px;
       right: 24px;
       background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
       border-radius: 999px;
       padding: 10px 16px;
       display: flex;
@@ -248,8 +237,8 @@
       top: 24px;
       right: 24px;
       background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
       border-radius: 999px;
       padding: 6px 14px;
       font-size: 14px;
@@ -265,8 +254,8 @@
       bottom: 76px; /* stacked above #volume-control's position, so they don't collide when radio is toggled on */
       right: 24px;
       background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
       border-radius: 999px;
       padding: 6px 14px;
       font-size: 14px;
@@ -282,8 +271,8 @@
       top: 24px;
       left: 24px;
       background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
       border-radius: 999px;
       padding: 6px 14px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

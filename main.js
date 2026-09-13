@@ -10,16 +10,17 @@ import * as iss from './layers/iss.js';
 
 // Cesium is a global from the CDN <script>, not an ES module import.
 
-// Centered on Tokyo Bay itself (not the city), pulled back enough to see
-// the whole bay from the Arakawa mouth down through the Uraga Channel.
+// Picked by eye using the camera-readout badge (see updateCameraBadge
+// below) rather than guessed - frames the whole bay from the Uraga
+// Channel entrance up past Tokyo/Chiba.
 const TOKYO_VIEW = {
-  destination: Cesium.Cartesian3.fromDegrees(139.85, 35.45, 65000),
+  destination: Cesium.Cartesian3.fromDegrees(139.6995, 34.6058, 31128),
   orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-20) },
 };
 
 const GLOBE_VIEW = {
   // Same longitude as Tokyo, pulled straight back.
-  destination: Cesium.Cartesian3.fromDegrees(139.85, 20, 20_000_000),
+  destination: Cesium.Cartesian3.fromDegrees(139.6995, 20, 20_000_000),
   orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 },
 };
 
