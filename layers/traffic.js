@@ -11,15 +11,81 @@
 // plane-models/NOTICE.txt for source/license), tinted by altitude band
 // rather than picked per real ICAO type - no verified CC0 "cute" low-poly
 // aircraft kit with real category variety was found, unlike the ships.
+//
+// Aircraft are upserted by ICAO hex (not rebuilt from scratch every poll)
+// into a SampledPositionProperty per aircraft, so the entity glides
+// smoothly between the last few real fixes instead of snapping to a new
+// spot every REFRESH_MS. forwardExtrapolationType keeps it moving on its
+// last known heading/speed for a bit past the newest sample too, so a
+// slow or missed poll doesn't freeze it mid-air. Orientation comes from
+// Cesium's VelocityOrientationProperty - derived from the interpolated
+// path itself, so banking stays in sync with position rather than
+// snapping separately every poll. Requires viewer.clock.shouldAnimate,
+// set once in main.js.
 
 const TAR1090_URL = 'http://192.168.1.14/tar1090/data/aircraft.json';
 const REFRESH_MS = 5_000; // local network, no rate limit to respect
+const STALE_MS = 30_000; // pruned if missing from ~6 consecutive polls
+const EXTRAPOLATE_SECONDS = 15; // safety margin past the newest sample
 const PLANE_MODEL = '/plane-models/Cesium_Air.glb';
 const LOW_ALT_COLOR = Cesium.Color.fromCssColorString('#4fd6ff'); // below ~10,000 ft
 const HIGH_ALT_COLOR = Cesium.Color.fromCssColorString('#ffd24f'); // above ~10,000 ft
 
 let _dataSource = null;
 let _timer = null;
+const _aircraft = new Map(); // hex -> { positionProperty, entity, lastUpdate }
+
+function upsertAircraft(hex, ac) {
+  const altFt = typeof ac.alt_baro === 'number' ? ac.alt_baro : 0; // alt_baro can be "ground"
+  const altM = altFt * 0.3048;
+  const callsign = (ac.flight || ac.hex || '').trim();
+  const position = Cesium.Cartesian3.fromDegrees(ac.lon, ac.lat, Math.max(altM, 50));
+  const description = `<b>${callsign || 'Unknown'}</b>${ac.t ? ` (${ac.t})` : ''}<br>Altitude: ${Math.round(altFt)} ft`;
+  const color = altFt > 10_000 ? HIGH_ALT_COLOR : LOW_ALT_COLOR;
+  const now = Cesium.JulianDate.now();
+
+  let a = _aircraft.get(hex);
+  if (!a) {
+    const positionProperty = new Cesium.SampledPositionProperty();
+    positionProperty.forwardExtrapolationType = Cesium.ExtrapolationType.EXTRAPOLATE;
+    positionProperty.forwardExtrapolationDuration = EXTRAPOLATE_SECONDS;
+    positionProperty.setInterpolationOptions({
+      interpolationDegree: 1,
+      interpolationAlgorithm: Cesium.LinearApproximation,
+    });
+    positionProperty.addSample(now, position);
+
+    const entity = _dataSource.entities.add({
+      position: positionProperty,
+      orientation: new Cesium.VelocityOrientationProperty(positionProperty),
+      model: {
+        uri: PLANE_MODEL,
+        minimumPixelSize: 40,
+        maximumScale: 600,
+        color,
+        colorBlendMode: Cesium.ColorBlendMode.MIX,
+        colorBlendAmount: 0.35,
+      },
+      description,
+    });
+    a = { positionProperty, entity };
+    _aircraft.set(hex, a);
+  } else {
+    a.positionProperty.addSample(now, position);
+    a.entity.model.color = color;
+    a.entity.description = description;
+  }
+  a.lastUpdate = Date.now();
+}
+
+function pruneStaleAircraft() {
+  const now = Date.now();
+  for (const [hex, a] of _aircraft) {
+    if (now - a.lastUpdate <= STALE_MS) continue;
+    _dataSource.entities.remove(a.entity);
+    _aircraft.delete(hex);
+  }
+}
 
 async function refresh() {
   if (!_dataSource?.show) return;
@@ -40,32 +106,12 @@ async function refresh() {
       console.log('[Traffic] DIAGNOSTIC - type field (t) values seen:', aircraft.map((a) => a.t));
     }
 
-    _dataSource.entities.removeAll();
     for (const ac of aircraft) {
-      if (!Number.isFinite(ac.lat) || !Number.isFinite(ac.lon)) continue;
-      const altFt = typeof ac.alt_baro === 'number' ? ac.alt_baro : 0; // alt_baro can be "ground"
-      const altM = altFt * 0.3048;
-      const headingDeg = Number.isFinite(ac.track) ? ac.track : 0;
-      const callsign = (ac.flight || ac.hex || '').trim();
-      const position = Cesium.Cartesian3.fromDegrees(ac.lon, ac.lat, Math.max(altM, 50));
-      const description = `<b>${callsign || 'Unknown'}</b>${ac.t ? ` (${ac.t})` : ''}<br>Altitude: ${Math.round(altFt)} ft`;
-
-      const hpr = new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(headingDeg), 0, 0);
-      _dataSource.entities.add({
-        position,
-        orientation: Cesium.Transforms.headingPitchRollQuaternion(position, hpr),
-        model: {
-          uri: PLANE_MODEL,
-          minimumPixelSize: 24,
-          maximumScale: 300,
-          color: altFt > 10_000 ? HIGH_ALT_COLOR : LOW_ALT_COLOR,
-          colorBlendMode: Cesium.ColorBlendMode.MIX,
-          colorBlendAmount: 0.35,
-        },
-        description,
-      });
+      if (!Number.isFinite(ac.lat) || !Number.isFinite(ac.lon) || !ac.hex) continue;
+      upsertAircraft(ac.hex, ac);
     }
-    console.log('[Traffic] aircraft rendered:', aircraft.length);
+    pruneStaleAircraft();
+    console.log('[Traffic] aircraft tracked:', _aircraft.size);
   } catch (e) {
     console.error('[Traffic] fetch failed (check the Network tab - could be CORS, could be the receiver being offline):', e);
   }

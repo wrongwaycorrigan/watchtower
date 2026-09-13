@@ -61,6 +61,11 @@ async function initCesium() {
     fullscreenButton: false,
   });
 
+  // Drives the Air Traffic layer's interpolated flight paths (a
+  // SampledPositionProperty only animates while the clock is ticking).
+  // No other layer depends on clock time, so this is safe globally.
+  viewer.clock.shouldAnimate = true;
+
   // CARTO Dark Matter instead of photoreal satellite imagery - a clean,
   // stylized dark basemap that reads better zoomed in on the 3D buildings
   // layer than a texture-heavy aerial photo does. Needs a free CARTO API
