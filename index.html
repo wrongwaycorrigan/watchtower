@@ -62,9 +62,6 @@
   <!-- Small ambient moon phase badge - pure math, always visible, not a toggleable layer -->
   <div id="moon-badge" title="Current moon phase">--</div>
 
-  <!-- Live camera readout - for picking default-view coordinates, not a data layer -->
-  <div id="camera-badge" title="Current camera position — copy into TOKYO_VIEW in main.js">--</div>
-
   <!-- Radio volume control — shown/hidden alongside the radio layer -->
   <div id="volume-control" class="hidden">
     <button id="muteBtn" class="mute-btn" title="Mute/unmute">🔊</button>
@@ -263,25 +260,6 @@
       color: var(--text-primary);
       box-shadow: var(--panel-shadow);
       z-index: 10000;
-    }
-
-    /* Live camera readout - top-left, the one free corner */
-    #camera-badge {
-      position: fixed;
-      top: 24px;
-      left: 24px;
-      background: var(--panel-bg);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border-radius: 999px;
-      padding: 6px 14px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-primary);
-      box-shadow: var(--panel-shadow);
-      z-index: 10000;
-      white-space: nowrap;
     }
 
     /* Toggle Animation */

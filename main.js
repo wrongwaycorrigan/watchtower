@@ -87,26 +87,6 @@ async function initCesium() {
 
   viewer.camera.flyTo(TOKYO_VIEW);
 
-  // === Camera readout ===
-  // Not a data layer - just makes it easy to pick new TOKYO_VIEW/GLOBE_VIEW
-  // coordinates by eye: fly the camera where you want it, read the values
-  // off the badge, paste them in above.
-  const cameraBadge = document.getElementById('camera-badge');
-  function updateCameraBadge() {
-    if (!cameraBadge) return;
-    const carto = viewer.camera.positionCartographic;
-    const lon = Cesium.Math.toDegrees(carto.longitude).toFixed(4);
-    const lat = Cesium.Math.toDegrees(carto.latitude).toFixed(4);
-    const height = Math.round(carto.height);
-    const heading = Math.round(Cesium.Math.toDegrees(viewer.camera.heading));
-    const pitch = Math.round(Cesium.Math.toDegrees(viewer.camera.pitch));
-    cameraBadge.textContent = `${lon}, ${lat} · ${height}m · hdg ${heading}° pitch ${pitch}°`;
-  }
-  // camera.changed only fires after a large (50%+) view change, too coarse
-  // for a live readout while panning/zooming - postRender fires every
-  // frame instead, which is what makes this actually track smoothly.
-  viewer.scene.postRender.addEventListener(updateCameraBadge);
-
   console.log('Cesium viewer initialized successfully');
 
   // Every real layer gets set up once, hidden, then toggled by its dock button.
