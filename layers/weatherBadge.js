@@ -1,14 +1,9 @@
 // Tokyo weather badge — small ambient status, not a toggleable globe layer.
-// Just a number and an emoji, always visible, out of the way (top-right).
-//
-// Uses Open-Meteo's current weather endpoint (keyless), fetched once on
-// load and then on a slow interval. WMO weather codes are what Open-Meteo
-// returns for sky condition - mapped to a small emoji set below covering
-// the common cases; anything unmapped falls back to a generic icon rather
-// than showing nothing.
+// Uses Open-Meteo's current weather endpoint (keyless). WMO weather codes
+// map to an emoji below; anything unmapped falls back to a generic icon.
 
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast?latitude=35.6895&longitude=139.6917&current=temperature_2m,weather_code';
-const REFRESH_MS = 15 * 60_000; // slow - this is ambient status, not live tracking
+const REFRESH_MS = 15 * 60_000; // ambient status, not live tracking
 
 // WMO weather codes -> emoji. https://open-meteo.com/en/docs (weather_code)
 function weatherEmoji(code) {
@@ -22,7 +17,7 @@ function weatherEmoji(code) {
   if (code >= 80 && code <= 82) return '🌦️';
   if (code === 85 || code === 86) return '🌨️';
   if (code >= 95) return '⛈️';
-  return '🌡️'; // unmapped code - still show something rather than nothing
+  return '🌡️'; // unmapped code
 }
 
 async function refresh() {

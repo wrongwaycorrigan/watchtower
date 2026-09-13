@@ -1,35 +1,16 @@
 // Weather — RainViewer live precipitation radar, keyless.
 //
-// Earlier versions of this file tried two approaches that didn't land:
-//   1. A grid of Open-Meteo cloud/precip billboard dots - functionally
-//      fine, but visually just reads as "a grid of dots," not weather.
-//   2. RainViewer's imagery layer with no zoom limit set - which meant
-//      zooming in past their tile depth requested a tile that doesn't
-//      exist, and their server returns an actual "Zoom level Not
-//      Supported" placeholder image instead of just going blank.
+// RainViewer's free tier caps at zoom 7 (~150km tiles). maximumLevel: 7
+// tells Cesium to stretch that tile at closer zooms instead of requesting
+// a nonexistent deeper one, which otherwise returns an error placeholder.
+// Close zoom will look like a soft blur rather than crisp radar detail.
 //
-// The real fix for #2: RainViewer's own docs confirm their free tier's
-// maximum zoom is 7 (~150km per tile - they restricted this in Jan 2026;
-// it used to go deeper). Passing `maximumLevel: 7` to Cesium's imagery
-// provider tells it to stop there and reuse/stretch that tile for closer
-// zooms, instead of requesting a nonexistent deeper one. That's exactly
-// what `maximumLevel` is for, and it's the standard way to handle any
-// imagery source with a hard native resolution ceiling.
-//
-// Honest trade-off: at true close/street-level zoom, this will look like
-// a soft, blurry color wash rather than crisp radar detail, since a 150km
-// tile is being stretched, not resampled from finer data that doesn't
-// exist. But it stays visibly present and never shows an error tile.
-//
-// If genuinely crisp close-zoom radar matters later: LibreWXR
-// (github.com/JoshuaKimsey/LibreWXR) is a self-hostable, drop-in-API-
-// compatible replacement that restores full pre-restriction resolution -
-// swapping to it later would just mean changing RAINVIEWER_INDEX/tile
-// URL below to your own hosted instance, no other code changes needed.
+// LibreWXR (github.com/JoshuaKimsey/LibreWXR) is a self-hostable
+// alternative with full resolution, if that's needed later.
 
 const RAINVIEWER_INDEX = 'https://api.rainviewer.com/public/weather-maps.json';
 const REFRESH_MS = 10 * 60_000;
-const RAINVIEWER_MAX_ZOOM = 7; // confirmed via RainViewer's own docs
+const RAINVIEWER_MAX_ZOOM = 7;
 
 let _viewer = null;
 let _precipLayer = null;

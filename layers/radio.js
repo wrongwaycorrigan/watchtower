@@ -1,16 +1,10 @@
 // Radio — internet radio stations (radio-browser.info) + WSPR beacon
-// propagation (wspr.live), combined under one button/panel/count.
+// propagation (wspr.live), combined under one button/panel/count. Same
+// pattern as disasters.js: two independent sources under one layer.
+// wspr.js keeps its own module; this file calls into it directly.
 //
-// Same pattern as disasters.js: two genuinely independent data sources,
-// each still doing its own thing under the hood, but presented as one
-// layer to the rest of the app since they're thematically the same idea
-// ("radio" - one you listen to, one you can't hear but can see the
-// propagation of). wspr.js keeps its own module entirely - this file just
-// calls into its init/setEnabled/getCount alongside its own station logic.
-//
-// radio-browser.info is served from several community mirrors (de1, nl1,
-// at1, ...). Using one directly (de1 here) is fine for light/personal use;
-// if it's ever down, swap the host below for another mirror.
+// radio-browser.info is served from community mirrors (de1, nl1, at1, ...);
+// swap the host below if de1 is ever down.
 
 import * as wspr from './wspr.js';
 

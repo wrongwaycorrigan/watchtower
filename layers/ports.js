@@ -1,39 +1,13 @@
-// Tokyo Bay Ports — port terminals and tide-monitoring stations are fully
-// static (see below), NDBC weather buoys are the one live piece: station
-// positions are discovered once from NOAA's real station list, and each
-// buoy's actual readings are fetched lazily, only when you click it, not
-// eagerly for every station on load.
+// Tokyo Bay Ports — port terminals and tide stations are static; NDBC
+// weather buoys are the one live piece, discovered once from NOAA's
+// station list, with readings fetched lazily on click.
 //
-// This used to also do LIVE tide-based coloring via TidesAtlas, refetched
-// periodically. Dropped that: TidesAtlas's free tier is 50 ONE-TIME
-// credits (not monthly), so anything that polls regularly burns through
-// it in days, not something worth building a recurring feature around. A
-// static snapshot of where the real tide stations are is exactly as
-// useful for a map like this and costs nothing ongoing.
-//
-// The 5 station coordinates below were confirmed directly against
-// TidesAtlas's /ports search endpoint (their country=japan filter had a
-// real bug - returned only 1 of 617 actual Japan stations; searching by
-// name per city worked correctly instead).
-//
-// Honest caveat on port terminal coordinates: reasonable approximate
-// placements for each terminal/pier, not survey-grade GPS pins - good
-// enough for "here's roughly where this is on the bay," not precise
-// enough for navigation. Berth/quay figures are only included where they
-// come from an actual cited source (noted per entry). Tide station
-// coordinates, by contrast, come directly from TidesAtlas's own database.
-//
-// NDBC buoys are genuinely untested territory this session: CORS isn't
-// confirmed, and their data is served as plain whitespace-delimited text
-// (not JSON), so it needs actual parsing rather than res.json(). Their
-// own docs state "No API keys required" and list ~1,350 stations
-// worldwide, but whether that includes real Korea/Japan coverage isn't
-// confirmed until this actually runs. Diagnostic logging left in
-// deliberately, same as the first real test of wspr.live and adsb.fi.
+// Port terminal coordinates are approximate placements, not survey-grade.
+// Tide station coordinates come from TidesAtlas's database.
 
 const NDBC_ACTIVE_STATIONS_URL = 'https://www.ndbc.noaa.gov/activestations.xml';
 const NDBC_REALTIME_BASE = 'https://www.ndbc.noaa.gov/data/realtime2';
-// Covers both Japan (~24-46N, 122-146E) and Korea (~33-43N, 124-131E) in one box.
+// Covers Japan and Korea in one box.
 const NDBC_BBOX = { minLat: 24, maxLat: 46, minLon: 122, maxLon: 146 };
 
 const PORT_COLOR = Cesium.Color.fromCssColorString('#1e88a8'); // deep maritime teal
@@ -99,7 +73,6 @@ const PORTS = [
   },
 ];
 
-// Real tide-monitoring station positions, confirmed via TidesAtlas's API.
 const TIDE_STATIONS = [
   { name: 'Tokyo', slug: 'tokyo', lat: 35.648617, lon: 139.77 },
   { name: 'Yokohama', slug: 'yokohama', lat: 35.466667, lon: 139.633333 },
@@ -112,17 +85,12 @@ let _dataSource = null;
 let _buoysDiscovered = false;
 let _selectedHandler = null;
 
-/**
- * Parses NDBC's realtime2 station text format: a header line (column
- * names, prefixed with #), a units line, then data rows newest-first.
- * Column-name-driven rather than fixed positions, since the exact column
- * set varies between buoy types and C-MAN stations.
- */
+// NDBC realtime2 format: header line, units line, then data rows.
 function parseNdbcObservation(text) {
   const lines = text.trim().split('\n');
   if (lines.length < 3) return null;
   const headers = lines[0].replace(/^#/, '').trim().split(/\s+/);
-  const values = lines[2].trim().split(/\s+/); // row 0 = headers, row 1 = units, row 2 = most recent observation
+  const values = lines[2].trim().split(/\s+/); // row 2 = most recent observation
   const obs = {};
   headers.forEach((h, i) => {
     const v = values[i];

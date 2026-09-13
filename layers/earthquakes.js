@@ -1,7 +1,6 @@
 // Earthquakes — USGS, last 24h, M2.5+.
-// Colored by depth (shallow=red, intermediate=orange, deep=yellow), sized by
-// magnitude. Click a disc for details via Cesium's built-in infoBox — no
-// custom card needed for a minimal build.
+// Colored by depth (shallow=red, intermediate=orange, deep=yellow), sized
+// by magnitude. Click a disc for details via Cesium's built-in infoBox.
 
 const API_URL = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson';
 const REFRESH_MS = 60_000;

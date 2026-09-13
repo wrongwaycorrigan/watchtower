@@ -1,12 +1,10 @@
 // Radiosondes — live weather balloon positions from SondeHub, keyless.
+// Refreshes on enable, on a debounced camera-changed event, and on a slow
+// interval as a fallback. Don't hook preRender here — it fires every
+// frame and will get this endpoint rate-limited.
 //
-// Refreshes on enable, on a DEBOUNCED camera-changed event, and on a slow
-// interval as a fallback. Do not hook viewer.scene.preRender for this —
-// that fires every rendered frame (30-60+/sec) and will get this endpoint
-// rate-limited almost immediately. Learned the hard way once already.
-//
-// Uses entities (not a raw PointPrimitiveCollection) specifically so each
-// balloon can carry a label — point primitives can't have one attached.
+// Uses entities, not a raw PointPrimitiveCollection, so each balloon can
+// carry a label.
 
 const SONDEHUB_BASE = 'https://api.v2.sondehub.org';
 const CAMERA_SETTLE_MS = 2500;
@@ -67,7 +65,7 @@ async function refresh() {
         position: Cesium.Cartesian3.fromDegrees(s.lon, s.lat, altM),
         model: {
           uri: '/sdrangel-3d-models/radiosondeballon.glb',
-          minimumPixelSize: getDotSize(altM) * 10, // bumped up substantially - few simultaneous sondes means clutter isn't a concern, prioritize visibility
+          minimumPixelSize: getDotSize(altM) * 10, // few simultaneous sondes, so prioritize visibility
           maximumScale: 15000,
           color,
           colorBlendMode: Cesium.ColorBlendMode.MIX,

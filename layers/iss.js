@@ -1,31 +1,13 @@
 // ISS live position — Open Notify API (api.open-notify.org), keyless.
+// Uses JSONP (Open Notify has no CORS headers). API is http:// only, so
+// this would need a different approach if Watchtower is served over https.
 //
-// This API is documented elsewhere as having no CORS headers, so a plain
-// fetch() would likely be blocked the same way adsb.fi was earlier in
-// this project. Its own docs explicitly document a JSONP fallback
-// (?callback=...) built for exactly this situation — script tags aren't
-// subject to the Same-Origin Policy the way fetch()/XHR are. Using that
-// documented escape hatch directly rather than guessing at fetch() first.
-//
-// Note: the API is http:// only, not https://. Fine for this project's
-// current local http://localhost setup: if Watchtower is ever served over
-// https, this would need a different approach (mixed-content blocking,
-// same class of issue flagged for the local tar1090 receiver).
-//
-// Not wired into the dock-toggle system at all — no new icon, per the
-// request. show()/hide() are called directly from the globe-view toggle
-// in main.js: the ISS only appears while zoomed out to see the whole
-// Earth, which is the only view where its real orbital altitude actually
-// reads as "in the sky" rather than an arbitrary floating dot.
-//
-// Uses the real iss.glb model from srcejon/sdrangel-3d-models (local copy
-// at sdrangel-3d-models/ in the project root, served the same way as any
-// other static file). minimumPixelSize keeps it visible at globe-view
-// distances, where the model's real-world scale would otherwise be
-// imperceptible.
+// Not wired into the dock-toggle system — setEnabled() is called directly
+// from main.js's globe-view toggle, since real orbital altitude only reads
+// as "in the sky" when zoomed out. Uses iss.glb from srcejon/sdrangel-3d-models.
 
-const ISS_POLL_MS = 5000; // matches Open Notify's own "no more than once every 5s" guidance
-const ISS_ALTITUDE_M = 408_000; // approximate mean ISS altitude - varies ~370-460km with reboosts
+const ISS_POLL_MS = 5000; // Open Notify's own rate guidance
+const ISS_ALTITUDE_M = 408_000; // approximate mean altitude
 
 let _viewer = null;
 let _entity = null;
@@ -66,7 +48,7 @@ async function refresh() {
         position,
         model: {
           uri: '/sdrangel-3d-models/iss.glb',
-          minimumPixelSize: 48, // real ISS scale would be invisible at globe-view distances
+          minimumPixelSize: 48, // real scale is invisible at globe-view distances
           maximumScale: 20000,
         },
         label: {

@@ -1,27 +1,13 @@
-// WSPR beacon propagation — wspr.live, a community-run open mirror of
-// WSPRnet spot data with a SQL-queryable HTTP+JSON endpoint. Genuinely
-// keyless, unlike the official WSPRnet API (which requires emailing
-// their custodian for access).
+// WSPR beacon propagation — wspr.live, a keyless community mirror of
+// WSPRnet spot data with a SQL-queryable HTTP+JSON endpoint.
 //
-// WSPR (Weak Signal Propagation Reporter) is amateur radio beacon data:
-// low-power transmitters send a callsign+grid+power beacon every 2
-// minutes, and stations that hear them report the reception. The result
-// is a live picture of radio propagation - literally "who can hear whom,
-// right now, and how far did that signal travel."
+// WSPR is amateur radio beacon data: low-power transmitters beacon every
+// 2 minutes, and stations that hear them report the reception, giving a
+// live picture of radio propagation.
 //
-// CORS not confirmed for this small volunteer-run research service (same
-// caution as Alert-JP earlier) - this is the first real test of it.
-// Diagnostic logging left in deliberately so a failure is immediately
-// diagnosable rather than another guessing round.
-//
-// Rendering: a gray polyline from transmitter to receiver for each spot,
-// with opacity faded by signal strength (SNR) rather than a color
-// gradient or animation - weak decodes are barely visible, strong ones
-// stand out clearly. Capped at a modest LIMIT and a 30-minute window to
-// keep the entity count reasonable, and polled every 3 minutes - WSPR
-// itself only cycles every 2 minutes, and wspr.live's own scrape cadence
-// is "every few minutes," so anything faster wouldn't show new data
-// anyway.
+// Rendered as a gray polyline per spot, opacity faded by SNR (signal
+// strength) rather than a color gradient. Capped to a 30-minute window
+// and polled every 3 minutes, matching WSPR's own cycle time.
 
 const WSPR_LIVE_URL = 'https://db1.wspr.live/';
 const REFRESH_MS = 3 * 60_000;
@@ -29,15 +15,7 @@ const REFRESH_MS = 3 * 60_000;
 // Rough bounding box around greater Tokyo/Kanto.
 const BBOX = { minLat: 34, maxLat: 37, minLon: 138, maxLon: 141 };
 
-// SNR (signal-to-noise ratio, dB) is WSPR's core "how well did this
-// decode" metric - practically almost always between about -30 (barely
-// decodable) and a few dB positive (strong). Rendered as a fixed gray
-// (avoids colliding with the traffic layer's gold/cyan plane icons - an
-// earlier gold-for-strong-signal version literally matched traffic's
-// high-altitude icon color exactly) that fades in and out with signal
-// strength, rather than a color gradient or a directional animation.
-// TX/RX distinction dropped entirely - not a priority for what this is
-// actually being used to see.
+// SNR (dB) ranges roughly -30 (barely decodable) to a few dB positive.
 const WSPR_GRAY = Cesium.Color.fromCssColorString('#9aa3ad');
 const SNR_MIN = -30;
 const SNR_MAX = 0;
