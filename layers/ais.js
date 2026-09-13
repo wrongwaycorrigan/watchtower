@@ -25,6 +25,58 @@ const MODELS_BASE = '/ship-models';
 // Tokyo Bay plus the Uraga Channel entrance.
 const BBOX = { minLat: 35.15, maxLat: 35.75, minLon: 139.6, maxLon: 140.15 };
 
+// MMSI's first three digits are the Maritime Identification Digits (MID),
+// an ITU-assigned country code - see itu.int's MID table. Not exhaustive:
+// covers flag states likely to actually show up in Tokyo Bay traffic
+// (Japanese coastal/fishing vessels, plus the usual flag-of-convenience
+// registries big cargo ships carry). An unmapped MID just shows no flag.
+const MID_COUNTRY = {
+  431: 'JP', 432: 'JP',
+  440: 'KR', 441: 'KR',
+  445: 'KP',
+  412: 'CN', 413: 'CN', 414: 'CN',
+  477: 'HK', 453: 'MO', 416: 'TW',
+  548: 'PH', 574: 'VN', 567: 'TH', 533: 'MY', 525: 'ID', 419: 'IN',
+  563: 'SG', 564: 'SG', 565: 'SG', 566: 'SG',
+  503: 'AU', 512: 'NZ',
+  273: 'RU',
+  338: 'US', 366: 'US', 367: 'US', 368: 'US', 369: 'US',
+  316: 'CA',
+  351: 'PA', 352: 'PA', 353: 'PA', 354: 'PA', 355: 'PA', 356: 'PA', 357: 'PA', // flag of convenience
+  636: 'LR', 637: 'LR', // flag of convenience
+  538: 'MH', // flag of convenience
+  308: 'BS', 309: 'BS', 311: 'BS', // flag of convenience
+  215: 'MT', 248: 'MT', 249: 'MT', 256: 'MT', // flag of convenience
+  209: 'CY', 210: 'CY', 212: 'CY',
+  232: 'GB', 233: 'GB', 234: 'GB', 235: 'GB',
+  226: 'FR', 227: 'FR', 228: 'FR',
+  211: 'DE', 218: 'DE',
+  244: 'NL', 245: 'NL', 246: 'NL',
+  219: 'DK', 220: 'DK',
+  257: 'NO', 258: 'NO', 259: 'NO',
+  247: 'IT',
+  237: 'GR', 239: 'GR', 240: 'GR', 241: 'GR',
+};
+
+function countryForMmsi(mmsi) {
+  const mid = Number(String(mmsi).slice(0, 3));
+  return MID_COUNTRY[mid] || null;
+}
+
+function flagEmoji(countryCode) {
+  return [...countryCode].map((c) => String.fromCodePoint(127397 + c.charCodeAt(0))).join('');
+}
+
+let _regionNames = null;
+function countryName(countryCode) {
+  try {
+    _regionNames ??= new Intl.DisplayNames(['en'], { type: 'region' });
+    return _regionNames.of(countryCode) || countryCode;
+  } catch (e) {
+    return countryCode;
+  }
+}
+
 function modelForType(type) {
   if (type === 30) return 'boat-fishing-small.glb';
   if (type === 36) return 'boat-sail-a.glb';
@@ -45,7 +97,9 @@ const _vessels = new Map(); // mmsi -> { lat, lon, cog, sog, name, entity, lastU
 
 function describeVessel(mmsi, v) {
   const sog = Number.isFinite(v.sog) ? `${v.sog.toFixed(1)} kn` : 'unknown';
-  return `<b>${v.name || 'Unknown vessel'}</b><br>MMSI: ${mmsi}<br>Speed: ${sog}`;
+  const country = countryForMmsi(mmsi);
+  const flagLine = country ? `<br>Flag: ${flagEmoji(country)} ${countryName(country)}` : '';
+  return `<b>${v.name || 'Unknown vessel'}</b><br>MMSI: ${mmsi}<br>Speed: ${sog}${flagLine}`;
 }
 
 function upsertVessel(mmsi, updates) {
@@ -59,7 +113,9 @@ function upsertVessel(mmsi, updates) {
 
   if (!Number.isFinite(v.lat) || !Number.isFinite(v.lon)) return;
 
-  const label = v.name || `MMSI ${mmsi}`;
+  const country = countryForMmsi(mmsi);
+  const flag = country ? `${flagEmoji(country)} ` : '';
+  const label = flag + (v.name || `MMSI ${mmsi}`);
   const headingDeg = Number.isFinite(v.cog) ? v.cog : 0;
   const position = Cesium.Cartesian3.fromDegrees(v.lon, v.lat);
   const hpr = new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(headingDeg), 0, 0);
@@ -107,7 +163,6 @@ function upsertVessel(mmsi, updates) {
 // instead of failing silently - same diagnostic-logging approach already
 // used in traffic.js and wspr.js for their own first real tests.
 let _rawMessageCount = 0;
-let _parsedVesselCount = 0;
 const RAW_LOG_LIMIT = 5;
 
 function handleMessage(raw) {
@@ -136,7 +191,6 @@ function handleMessage(raw) {
     const pr = msg.Message?.PositionReport;
     if (!pr) return;
     upsertVessel(mmsi, { lat: pr.Latitude, lon: pr.Longitude, cog: pr.Cog, sog: pr.Sog });
-    _parsedVesselCount += 1;
   } else if (msg.MessageType === 'ShipStaticData') {
     const sd = msg.Message?.ShipStaticData;
     if (!sd) return;
