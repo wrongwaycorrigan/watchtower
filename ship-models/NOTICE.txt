@@ -3,8 +3,13 @@ Ship models used by layers/ais.js.
 Source: Kenney's Watercraft Kit (https://kenney.nl/assets/watercraft-kit),
 via the glTF-converted mirror at https://github.com/shorepine/kenney
 (3d/watercraft/). Only a small subset of the full 46-model kit is used
-here — see MODEL_FOR_TYPE in ais.js for which file maps to which AIS
+here — see modelForType() in ais.js for which file maps to which AIS
 ship type.
+
+Textures/colormap.png is a single shared texture atlas used by every
+model in the kit — each .glb references it by the relative URI
+"Textures/colormap.png", which is why it has to sit in that same
+subfolder here rather than next to the .glb files directly.
 
 License: CC0 1.0 Universal (public domain). No attribution required.
 Consider supporting Kenney at https://kenney.nl/donate.
