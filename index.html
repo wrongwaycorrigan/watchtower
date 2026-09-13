@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Watchtower</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Include the CesiumJS JavaScript and CSS files -->
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.145/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.145/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+</head>
+<body>
+  <!-- Dock-style navigation bar -->
+  <nav id="dockNavigation" class="dock-panel">
+    <button id="globeBtn" class="dock-btn" title="Toggle Full Globe View">🌍</button>
+    <button id="buildingsBtn" class="dock-btn dock-toggle" data-target="buildings-layer" title="3D Buildings">🏢</button>
+    <button id="radioBtn" class="dock-btn dock-toggle" data-target="radio-panel" title="Radio (streaming + WSPR propagation)">📡</button>
+    <button id="trafficBtn" class="dock-btn dock-toggle" data-target="traffic-panel" title="Air Traffic">✈️</button>
+    <button id="portsBtn" class="dock-btn dock-toggle" data-target="ports-panel" title="Tokyo Bay Ports">⚓</button>
+    <button id="sondeBtn" class="dock-btn dock-toggle" data-target="sonde-panel" title="Radiosondes">🎈</button>
+    <button id="weatherBtn" class="dock-btn dock-toggle" data-target="weather-panel" title="Weather">🌤️</button>
+    <button id="disasterBtn" class="dock-btn dock-toggle" data-target="disaster-panel" title="Disasters (earthquakes + volcanic)">⚠️</button>
+  </nav>
+
+  <!-- Control panels (hidden by default) -->
+  <div id="buildings-layer" class="control-panel hidden">
+    <strong>3D Buildings</strong>
+    <p class="source">Japan PLATEAU (MLIT)</p>
+  </div>
+  <div id="radio-panel" class="control-panel hidden">
+    <strong>Radio</strong>
+    <p class="source">radio-browser.info + wspr.live</p>
+    <p class="count" id="radio-count">0</p>
+  </div>
+  <div id="traffic-panel" class="control-panel hidden">
+    <strong>Air Traffic</strong>
+    <p class="source">Local receiver (tar1090)</p>
+    <p class="count" id="traffic-count">0</p>
+  </div>
+  <div id="ports-panel" class="control-panel hidden">
+    <strong>Tokyo Bay Ports</strong>
+    <p class="source">Curated (static, no live feed)</p>
+    <p class="count" id="ports-count">0</p>
+  </div>
+  <div id="sonde-panel" class="control-panel hidden">
+    <strong>Radiosondes</strong>
+    <p class="source">SondeHub</p>
+    <p class="count" id="sonde-count">0</p>
+  </div>
+  <div id="weather-panel" class="control-panel hidden">
+    <strong>Weather</strong>
+    <p class="source">RainViewer</p>
+  </div>
+  <div id="disaster-panel" class="control-panel hidden">
+    <strong>Disasters</strong>
+    <ul class="recent-list" id="disaster-recent"></ul>
+    <p class="count" id="disaster-count">0</p>
+  </div>
+
+  <!-- Cesium container -->
+  <div id="cesiumContainer"></div>
+
+  <!-- Small ambient Tokyo weather badge - always visible, not a toggleable layer -->
+  <div id="weather-badge" title="Tokyo, current conditions">--</div>
+
+  <!-- Small ambient moon phase badge - pure math, always visible, not a toggleable layer -->
+  <div id="moon-badge" title="Current moon phase">--</div>
+
+  <!-- Radio volume control — shown/hidden alongside the radio layer -->
+  <div id="volume-control" class="hidden">
+    <span>🔊</span>
+    <input id="volume-slider" type="range" min="0" max="100" value="70" title="Radio volume">
+  </div>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --panel-bg: rgba(255, 252, 248, 0.96);
+      --panel-shadow: 0 10px 30px rgba(40, 30, 20, 0.18);
+      --text-primary: #3a332c;
+      --text-secondary: #8a8074;
+      --accent: #3ddc97;
+      --accent-soft: #d3f7e6;
+      --neutral: #f4efe8;
+      --neutral-hover: #ece4d9;
+    }
+
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0d12; }
+
+    body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    #cesiumContainer { width: 100%; height: 100%; }
+
+    /* Dock Navigation — a soft rounded pill instead of a hard rectangle */
+    .dock-panel {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 999px;
+      padding: 10px 14px;
+      display: flex;
+      gap: 8px;
+      box-shadow: var(--panel-shadow);
+      z-index: 10000;
+    }
+
+    .dock-btn {
+      width: 46px;
+      height: 46px;
+      border: none;
+      background: var(--neutral);
+      color: var(--text-primary);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .dock-btn:hover {
+      background: var(--neutral-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(40, 30, 20, 0.12);
+    }
+
+    /* Active state — warm accent instead of steel blue */
+    .dock-btn.active {
+      background: var(--accent);
+      box-shadow: 0 4px 14px rgba(61, 220, 151, 0.45);
+    }
+
+    /* Off state — soft and quiet, not harsh gray */
+    .dock-btn.disabled {
+      background: var(--neutral);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transform: none !important;
+      box-shadow: none;
+    }
+
+    /* Control Panels — friendly rounded cards, soft shadow instead of glow */
+    .control-panel {
+      position: fixed;
+      top: 24px; /* JS overrides this per-panel based on real measured height - see relayoutPanels() in main.js */
+      left: 24px;
+      transition: top 0.2s ease;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 20px;
+      padding: 20px;
+      min-width: 230px;
+      max-width: 290px;
+      z-index: 10000;
+      color: var(--text-primary);
+      font-size: 13.5px;
+      line-height: 1.55;
+      box-shadow: var(--panel-shadow);
+    }
+
+    .control-panel strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .control-panel .source {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
+
+    .control-panel .count {
+      margin-top: 8px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .control-panel .recent-list {
+      list-style: none;
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-panel .recent-list li {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .control-panel.hidden { display: none !important; }
+
+    /* Radio volume — small floating pill, lower right */
+    #volume-control {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 999px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--panel-shadow);
+      z-index: 10000;
+      font-size: 15px;
+    }
+
+    #volume-control.hidden { display: none !important; }
+
+    #volume-slider {
+      width: 110px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Ambient Tokyo weather badge - small, top-right, out of the way */
+    #weather-badge {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      box-shadow: var(--panel-shadow);
+      z-index: 10000;
+    }
+
+    /* Ambient moon phase badge - lower-right, stacked above the volume control (not lower-left, too close to Cesium's attribution text there) */
+    #moon-badge {
+      position: fixed;
+      bottom: 76px; /* stacked above #volume-control's position, so they don't collide when radio is toggled on */
+      right: 24px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      box-shadow: var(--panel-shadow);
+      z-index: 10000;
+    }
+
+    /* Toggle Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideOut {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-20px); }
+    }
+  </style>
+
+  <!--
+    Cesium Ion token lives in config.js, not here — config.js is gitignored
+    so the real token never gets committed. See config.example.js for the
+    template and README for setup.
+  -->
+  <script src="./config.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
