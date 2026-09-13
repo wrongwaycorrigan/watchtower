@@ -45,9 +45,13 @@ const LAYERS = {
 let buildingTileset = null;
 
 async function initCesium() {
-  const terrainProvider = await Cesium.createWorldTerrainAsync();
+  // No terrainProvider - defaults to a flat ellipsoid. Real elevation data
+  // doesn't add much to this style of clean, stylized map, and Tokyo Bay's
+  // waterfront (what the default view actually frames) is low-lying land
+  // near sea level anyway. The 3D Buildings tileset is unaffected either
+  // way - it's a separately georeferenced Cesium3DTileset with its own
+  // baked-in heights, not something terrain drapes or positions.
   const viewer = new Cesium.Viewer('cesiumContainer', {
-    terrainProvider,
     baseLayer: false, // replaced right below with CARTO Dark Matter instead of Cesium's Bing Maps default
     animation: false,
     baseLayerPicker: false,
