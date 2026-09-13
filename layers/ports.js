@@ -37,7 +37,6 @@ const PORT_COLOR = Cesium.Color.fromCssColorString('#1e88a8'); // deep maritime 
 const LIGHTHOUSE_COLOR = Cesium.Color.fromCssColorString('#ffca28'); // warm amber, for the flashing light itself
 const BUOY_MODEL = '/ship-models/buoy.glb';
 const BOAT_MODEL = '/ship-models/boat-house-a.glb';
-const LIGHTHOUSE_MODEL = '/tower-models/tower-complete-small.glb'; // see tower-models/NOTICE.txt - standing in for a lighthouse, Kenney has no dedicated one
 
 const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
 const MARINE_REFRESH_MS = 20 * 60_000; // sea temp/wave conditions change slowly
@@ -226,19 +225,14 @@ export function init(viewer) {
       Light: ${l.characteristic || 'unknown'}${l.heightM ? `, ${l.heightM}m above sea level` : ''}
     `;
 
-    // The tower itself, ground level.
-    _dataSource.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(l.lon, l.lat),
-      model: {
-        uri: LIGHTHOUSE_MODEL,
-        minimumPixelSize: 32,
-        maximumScale: 3000,
-      },
-      description,
-    });
-
-    // The light at the top, at its real height, still flashing on its
-    // real characteristic.
+    // A 3D tower model was tried here and reverted: with no dedicated
+    // lighthouse model available, the closest stand-in (Kenney's Pirate
+    // Kit tower) read as a castle, and there was no way to actually
+    // parent the light to its true top - minimumPixelSize/maximumScale
+    // drive the model's on-screen size independent of the light's real
+    // 56m height, so the two just floated near each other, not attached.
+    // A single accurate marker at the real height is more honest than a
+    // mismatched model.
     _dataSource.entities.add({
       position: Cesium.Cartesian3.fromDegrees(l.lon, l.lat, l.heightM || 0),
       point: {
