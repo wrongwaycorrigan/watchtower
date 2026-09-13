@@ -1,21 +1,24 @@
-// Tokyo Bay Ports — port terminals and tide stations are static; NDBC
-// weather buoys are discovered once from NOAA's station list, with
-// readings fetched lazily on click; live ship traffic (AIS) is its own
-// module, called into here the same way radio.js pulls in wspr.js.
+// Tokyo Bay Ports — port terminals and tide stations are static; live ship
+// traffic (AIS) is its own module, called into here the same way radio.js
+// pulls in wspr.js.
+//
+// This used to also plot NDBC weather buoys, discovered live from NOAA's
+// station list. Dropped that: neither activestations.xml nor the
+// per-buoy realtime2 endpoint sends Access-Control-Allow-Origin, so both
+// fetches were always going to be blocked by the browser - confirmed by
+// testing directly, not just the earlier "untested" guess. NDBC's own
+// coverage near Japan/Korea was never actually confirmed either, so
+// there's no verified static data to fall back to - see the tide-station
+// precedent below for what "static, but for real" looks like when there
+// is one.
 //
 // Port terminal coordinates are approximate placements, not survey-grade.
 // Tide station coordinates come from TidesAtlas's database.
 
 import * as ais from './ais.js';
 
-const NDBC_ACTIVE_STATIONS_URL = 'https://www.ndbc.noaa.gov/activestations.xml';
-const NDBC_REALTIME_BASE = 'https://www.ndbc.noaa.gov/data/realtime2';
-// Covers Japan and Korea in one box.
-const NDBC_BBOX = { minLat: 24, maxLat: 46, minLon: 122, maxLon: 146 };
-
 const PORT_COLOR = Cesium.Color.fromCssColorString('#1e88a8'); // deep maritime teal
 const TIDE_STATION_COLOR = Cesium.Color.fromCssColorString('#5ec8e0'); // lighter blue, distinct from port terminals
-const BUOY_COLOR = Cesium.Color.fromCssColorString('#5a7d9a'); // muted steel blue, distinct from both of the above
 
 const PORTS = [
   {
@@ -85,91 +88,6 @@ const TIDE_STATIONS = [
 ];
 
 let _dataSource = null;
-let _buoysDiscovered = false;
-let _selectedHandler = null;
-
-// NDBC realtime2 format: header line, units line, then data rows.
-function parseNdbcObservation(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 3) return null;
-  const headers = lines[0].replace(/^#/, '').trim().split(/\s+/);
-  const values = lines[2].trim().split(/\s+/); // row 2 = most recent observation
-  const obs = {};
-  headers.forEach((h, i) => {
-    const v = values[i];
-    obs[h] = v === 'MM' || v === undefined ? null : v; // NDBC uses "MM" for missing values
-  });
-  return obs;
-}
-
-function formatBuoyDescription(name, obs) {
-  if (!obs) return `<b>${name}</b><br>No recent observation available.`;
-  const rows = [
-    ['Wind speed', obs.WSPD, 'm/s'],
-    ['Wave height', obs.WVHT, 'm'],
-    ['Sea temp', obs.WTMP, '°C'],
-    ['Air temp', obs.ATMP, '°C'],
-    ['Pressure', obs.PRES, 'hPa'],
-  ].filter(([, v]) => v != null).map(([label, v, unit]) => `${label}: ${v} ${unit}`).join('<br>');
-  return `<b>${name}</b> (NDBC buoy)<br>${rows || 'No recent readings.'}`;
-}
-
-async function loadBuoyObservation(entity, stationId, name) {
-  entity.description = 'Loading observation...';
-  try {
-    const url = `${NDBC_REALTIME_BASE}/${stationId}.txt`;
-    console.log('[Ports/NDBC] requesting:', url);
-    const res = await fetch(url);
-    console.log('[Ports/NDBC] response status:', res.status);
-    if (!res.ok) {
-      entity.description = `<b>${name}</b><br>Could not load observation (status ${res.status}).`;
-      return;
-    }
-    const text = await res.text();
-    const obs = parseNdbcObservation(text);
-    entity.description = formatBuoyDescription(name, obs);
-  } catch (e) {
-    console.error('[Ports/NDBC] fetch failed (check the Network tab - could be CORS):', e);
-    entity.description = `<b>${name}</b><br>Could not load observation (network error).`;
-  }
-}
-
-async function discoverBuoys() {
-  if (_buoysDiscovered) return;
-  _buoysDiscovered = true;
-
-  try {
-    console.log('[Ports/NDBC] requesting station list:', NDBC_ACTIVE_STATIONS_URL);
-    const res = await fetch(NDBC_ACTIVE_STATIONS_URL);
-    console.log('[Ports/NDBC] station list response status:', res.status);
-    if (!res.ok) return;
-    const xmlText = await res.text();
-    const xml = new DOMParser().parseFromString(xmlText, 'text/xml');
-    const stations = Array.from(xml.getElementsByTagName('station'));
-    console.log('[Ports/NDBC] total stations in list:', stations.length);
-
-    let matched = 0;
-    for (const s of stations) {
-      const lat = parseFloat(s.getAttribute('lat'));
-      const lon = parseFloat(s.getAttribute('lon'));
-      const id = s.getAttribute('id');
-      const name = s.getAttribute('name') || id;
-      if (!Number.isFinite(lat) || !Number.isFinite(lon) || !id) continue;
-      if (lat < NDBC_BBOX.minLat || lat > NDBC_BBOX.maxLat || lon < NDBC_BBOX.minLon || lon > NDBC_BBOX.maxLon) continue;
-
-      matched += 1;
-      const entity = _dataSource.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(lon, lat),
-        point: { pixelSize: 7, color: BUOY_COLOR, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },
-        description: `<b>${name}</b><br>Click to load current observation.`,
-      });
-      entity.properties = new Cesium.PropertyBag({ isNdbcBuoy: true, stationId: id, stationName: name });
-    }
-    console.log('[Ports/NDBC] stations matched in Japan/Korea bbox:', matched);
-  } catch (e) {
-    console.error('[Ports/NDBC] station list fetch failed (check the Network tab - could be CORS):', e);
-  }
-}
 
 export function init(viewer) {
   _dataSource = new Cesium.CustomDataSource('ports');
@@ -192,21 +110,11 @@ export function init(viewer) {
     });
   }
 
-  _selectedHandler = () => {
-    const entity = viewer.selectedEntity;
-    if (!entity?.properties?.isNdbcBuoy) return;
-    const stationId = entity.properties.stationId.getValue();
-    const stationName = entity.properties.stationName.getValue();
-    loadBuoyObservation(entity, stationId, stationName);
-  };
-  viewer.selectedEntityChanged.addEventListener(_selectedHandler);
-
   ais.init(viewer);
 }
 
 export function setEnabled(enabled) {
   _dataSource.show = enabled;
-  if (enabled) discoverBuoys();
   ais.setEnabled(enabled);
 }
 

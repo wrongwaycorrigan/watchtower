@@ -10,8 +10,8 @@ overlays several live data layers on top.
 - Radio: streaming radio stations, WSPR propagation data, and curated
   amateur repeater site locations
 - Air Traffic: aircraft positions from a local receiver (tar1090)
-- Tokyo Bay Ports: curated port and tide station locations, NDBC weather
-  buoys, and live ship traffic from aisstream.io (AIS)
+- Tokyo Bay Ports: curated port and tide station locations, plus live
+  ship traffic from aisstream.io (AIS)
 - Radiosondes: weather balloon positions from SondeHub
 - Weather: precipitation radar from RainViewer
 - Disasters: recent earthquakes and volcanic activity
