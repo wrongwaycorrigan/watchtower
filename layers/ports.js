@@ -22,12 +22,36 @@
 //
 // Port terminal coordinates are approximate placements, not survey-grade.
 // Tide station coordinates come from TidesAtlas's database.
+//
+// Tide stations are rendered as a little Kenney rowboat (not a flat dot)
+// tinted by live sea surface temperature - blue when cold, orange when
+// warm - and sized up a bit for rougher wave conditions, via the Open-
+// Meteo Marine API (marine-api.open-meteo.com, separate from the regular
+// forecast API weather.js/weatherBadge.js already use successfully).
+// That subdomain is unreachable from this dev environment same as
+// several other APIs this session, so the request shape below is built
+// from Open-Meteo's well-established, consistent API convention rather
+// than a directly confirmed response - diagnostic logging is left in on
+// purpose, same as wspr.js/traffic.js for their own first real tests.
 
 import * as ais from './ais.js';
 
 const PORT_COLOR = Cesium.Color.fromCssColorString('#1e88a8'); // deep maritime teal
-const TIDE_STATION_COLOR = Cesium.Color.fromCssColorString('#5ec8e0'); // lighter blue, distinct from port terminals
 const BUOY_MODEL = '/ship-models/buoy.glb';
+const BOAT_MODEL = '/ship-models/boat-row-small.glb';
+
+const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
+const MARINE_REFRESH_MS = 20 * 60_000; // sea temp/wave conditions change slowly
+const TEMP_MIN_C = 10; // typical Tokyo Bay winter low
+const TEMP_MAX_C = 28; // typical Tokyo Bay summer high
+const COLD_COLOR = Cesium.Color.fromCssColorString('#4fc3f7');
+const WARM_COLOR = Cesium.Color.fromCssColorString('#ff7043');
+
+function tempColor(tempC) {
+  if (!Number.isFinite(tempC)) return Cesium.Color.WHITE;
+  const t = Cesium.Math.clamp((tempC - TEMP_MIN_C) / (TEMP_MAX_C - TEMP_MIN_C), 0, 1);
+  return Cesium.Color.lerp(COLD_COLOR, WARM_COLOR, t, new Cesium.Color());
+}
 
 const PORTS = [
   {
@@ -110,6 +134,46 @@ const BUOYS = [
 ];
 
 let _dataSource = null;
+let _marineTimer = null;
+const _tideEntities = []; // [{ station, entity }]
+
+async function refreshStationConditions(station, entity) {
+  try {
+    const params = new URLSearchParams({
+      latitude: station.lat,
+      longitude: station.lon,
+      current: 'wave_height,wave_period,wave_direction,sea_surface_temperature',
+      timezone: 'auto',
+    });
+    const res = await fetch(`${MARINE_URL}?${params}`);
+    console.log('[Ports/Marine] response status:', res.status, station.name);
+    if (!res.ok) return;
+    const data = await res.json();
+    console.log('[Ports/Marine] DIAGNOSTIC - raw current for', station.name, ':', data.current);
+    const c = data.current;
+    if (!c) return;
+
+    const tempC = c.sea_surface_temperature;
+    const waveM = c.wave_height;
+    entity.model.color = tempColor(tempC);
+    entity.model.minimumPixelSize = 18 + Math.min(Number(waveM) || 0, 2) * 6; // rougher seas -> bigger boat
+    entity.label.text = Number.isFinite(tempC) ? `${tempC.toFixed(1)}°C` : station.name;
+    entity.description = `
+      <b>${station.name} tide station</b><br>
+      Sea temp: ${Number.isFinite(tempC) ? `${tempC.toFixed(1)}°C` : 'unknown'}<br>
+      Wave height: ${Number.isFinite(waveM) ? `${waveM.toFixed(1)}m` : 'unknown'}<br>
+      Position via TidesAtlas, conditions via Open-Meteo Marine.
+    `;
+  } catch (e) {
+    console.error('[Ports/Marine] fetch failed (check the Network tab - could be CORS):', e);
+  }
+}
+
+function refreshAllMarineConditions() {
+  for (const { station, entity } of _tideEntities) {
+    refreshStationConditions(station, entity);
+  }
+}
 
 export function init(viewer) {
   _dataSource = new Cesium.CustomDataSource('ports');
@@ -125,11 +189,30 @@ export function init(viewer) {
   }
 
   for (const s of TIDE_STATIONS) {
-    _dataSource.entities.add({
+    const entity = _dataSource.entities.add({
       position: Cesium.Cartesian3.fromDegrees(s.lon, s.lat),
-      point: { pixelSize: 8, color: TIDE_STATION_COLOR, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },
+      model: {
+        uri: BOAT_MODEL,
+        minimumPixelSize: 18,
+        maximumScale: 60,
+        color: Cesium.Color.WHITE,
+        colorBlendMode: Cesium.ColorBlendMode.MIX,
+        colorBlendAmount: 0.55,
+      },
+      label: {
+        text: s.name,
+        font: '700 11px Nunito, sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        showBackground: true,
+        backgroundColor: Cesium.Color.BLACK.withAlpha(0.75),
+        backgroundPadding: new Cesium.Cartesian2(5, 3),
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -14),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      },
       description: `<b>${s.name} tide station</b><br>Position via TidesAtlas.`,
     });
+    _tideEntities.push({ station: s, entity });
   }
 
   for (const b of BUOYS) {
@@ -164,6 +247,13 @@ export function init(viewer) {
 
 export function setEnabled(enabled) {
   _dataSource.show = enabled;
+  if (enabled) {
+    refreshAllMarineConditions();
+    if (!_marineTimer) _marineTimer = setInterval(refreshAllMarineConditions, MARINE_REFRESH_MS);
+  } else if (_marineTimer) {
+    clearInterval(_marineTimer);
+    _marineTimer = null;
+  }
   ais.setEnabled(enabled);
 }
 
