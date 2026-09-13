@@ -176,7 +176,17 @@ function connect() {
       FilterMessageTypes: ['PositionReport', 'ShipStaticData'],
     }));
   };
-  _socket.onmessage = (e) => handleMessage(e.data);
+  _socket.onmessage = (e) => {
+    // aisstream.io sends frames as binary, not text - e.data arrives as a
+    // Blob, not a string. Confirmed by testing: JSON.parse(blob) doesn't
+    // throw a useful error, it silently stringifies to "[object Blob]"
+    // first and fails parsing *that*.
+    if (typeof e.data === 'string') {
+      handleMessage(e.data);
+    } else {
+      e.data.text().then(handleMessage).catch((err) => console.warn('[AIS] could not read blob message:', err));
+    }
+  };
   _socket.onerror = (e) => console.warn('[AIS] socket error:', e);
   _socket.onclose = (e) => {
     console.warn(`[AIS] socket closed (code ${e.code}, reason: "${e.reason}")`);
