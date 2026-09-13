@@ -11,3 +11,7 @@ window.CESIUM_ION_TOKEN = 'token';
 
 // Free API key from https://aisstream.io - powers the Ship Traffic (AIS) layer.
 window.AISSTREAM_API_KEY = 'token';
+
+// Free API key from https://carto.com/basemaps/apikey - powers the CARTO
+// Dark Matter basemap tiles.
+window.CARTO_API_KEY = 'token';

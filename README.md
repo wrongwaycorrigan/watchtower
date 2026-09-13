@@ -1,8 +1,8 @@
 # Watchtower
 
 Watchtower is a 3D map of the Tokyo Bay area built on CesiumJS. It renders
-satellite imagery, terrain, and Japan's PLATEAU 3D building models, then
-overlays several live data layers on top.
+a stylized dark basemap, terrain, and Japan's PLATEAU 3D building models,
+then overlays several live data layers on top.
 
 ## Layers
 
@@ -24,18 +24,20 @@ badge, and an ISS marker when zoomed out to the full globe view.
 This project has no build step. It runs directly as static files.
 
 1. Get a Cesium Ion access token from https://ion.cesium.com
-2. In your Cesium Ion account, add the Sentinel-2 imagery asset and the
-   Japan 3D Buildings asset (asset ID 2602291) to your account.
+2. In your Cesium Ion account, add the Japan 3D Buildings asset (asset ID
+   2602291) to your account.
 3. Get a free AIS Stream API key from https://aisstream.io for the Ship
    Traffic layer.
-4. Copy the example config file and add your tokens:
+4. Get a free CARTO API key from https://carto.com/basemaps/apikey for
+   the basemap tiles.
+5. Copy the example config file and add your tokens:
 
    cp config.example.js config.js
 
    Edit config.js and replace the placeholders with your real tokens.
    config.js is listed in .gitignore, so your tokens are not committed.
 
-5. Serve the directory with any static file server and open index.html
+6. Serve the directory with any static file server and open index.html
    in a browser. For example:
 
    python3 -m http.server 8000

@@ -47,7 +47,7 @@ async function initCesium() {
   const terrainProvider = await Cesium.createWorldTerrainAsync();
   const viewer = new Cesium.Viewer('cesiumContainer', {
     terrainProvider,
-    baseLayer: false, // replaced right below with Sentinel-2 instead of Cesium's Bing Maps default
+    baseLayer: false, // replaced right below with CARTO Dark Matter instead of Cesium's Bing Maps default
     animation: false,
     baseLayerPicker: false,
     geocoder: false,
@@ -60,12 +60,21 @@ async function initCesium() {
     fullscreenButton: false,
   });
 
-  // Sentinel-2 (Ion asset 3954) instead of the Bing Maps default - cloudless
-  // global satellite imagery, 10m resolution. Requires this asset to be
-  // added to your Ion account first (Asset Depot -> search "Sentinel-2" ->
-  // Add to my assets), same one-time step as the Japan 3D Buildings asset.
-  const sentinel2 = await Cesium.IonImageryProvider.fromAssetId(3954);
-  viewer.imageryLayers.addImageryProvider(sentinel2);
+  // CARTO Dark Matter instead of photoreal satellite imagery - a clean,
+  // stylized dark basemap that reads better zoomed in on the 3D buildings
+  // layer than a texture-heavy aerial photo does. Needs a free CARTO API
+  // key (see config.example.js) - their raster tiles started requiring
+  // one at some point; an unauthenticated request now comes back 403
+  // instead of the watermarked-but-working free tier older examples show.
+  if (!window.CARTO_API_KEY) {
+    console.warn('[main] window.CARTO_API_KEY not set — basemap tiles will fail to load. See config.example.js.');
+  }
+  const cartoDark = new Cesium.UrlTemplateImageryProvider({
+    url: `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=${window.CARTO_API_KEY ?? ''}`,
+    subdomains: ['a', 'b', 'c', 'd'],
+    credit: '© OpenStreetMap contributors © CARTO',
+  });
+  viewer.imageryLayers.addImageryProvider(cartoDark);
 
   const logo = document.getElementById('cesium-logo');
   if (logo) logo.style.display = 'none';
