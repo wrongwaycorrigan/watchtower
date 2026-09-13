@@ -37,6 +37,7 @@
 import * as ais from './ais.js';
 
 const PORT_COLOR = Cesium.Color.fromCssColorString('#1e88a8'); // deep maritime teal
+const LIGHTHOUSE_COLOR = Cesium.Color.fromCssColorString('#ffca28'); // warm amber, distinct from everything else
 const BUOY_MODEL = '/ship-models/buoy.glb';
 const BOAT_MODEL = '/ship-models/boat-house-a.glb';
 
@@ -133,6 +134,19 @@ const BUOYS = [
   },
 ];
 
+// From a user-supplied Japan lighthouses GeoJSON - the one entry (out of
+// 87) that actually falls inside Tokyo Bay itself, rather than elsewhere
+// on the coast (a couple of others sit on the Miura/Boso peninsulas but
+// face Sagami Bay or the open Pacific, not the bay proper).
+const LIGHTHOUSES = [
+  {
+    name: 'Kannonzaki Lighthouse',
+    lat: 35.25615,
+    lon: 139.74522,
+    description: "Japan's first Western-style lighthouse, built 1869. Marks the western side of the Uraga Channel entrance to Tokyo Bay, at Yokosuka.",
+  },
+];
+
 let _dataSource = null;
 let _marineTimer = null;
 const _tideEntities = []; // [{ station, entity }]
@@ -185,6 +199,14 @@ export function init(viewer) {
       position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat),
       point: { pixelSize: 10, color: PORT_COLOR, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },
       description: `<b>${p.name}</b> — ${p.port}<br>${p.description}`,
+    });
+  }
+
+  for (const l of LIGHTHOUSES) {
+    _dataSource.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(l.lon, l.lat),
+      point: { pixelSize: 10, color: LIGHTHOUSE_COLOR, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },
+      description: `<b>${l.name}</b><br>${l.description}`,
     });
   }
 
