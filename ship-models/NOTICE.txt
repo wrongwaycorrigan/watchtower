@@ -1,6 +1,6 @@
 Ship/buoy models used by layers/ais.js (ships, by AIS type — see
 modelForType()) and layers/ports.js (buoy.glb for the NOWPHAS wave buoy,
-boat-row-small.glb for the tide stations' live-conditions markers).
+boat-house-a.glb for the tide stations' live-conditions markers).
 
 Source: Kenney's Watercraft Kit (https://kenney.nl/assets/watercraft-kit),
 via the glTF-converted mirror at https://github.com/shorepine/kenney

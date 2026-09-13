@@ -38,7 +38,7 @@ import * as ais from './ais.js';
 
 const PORT_COLOR = Cesium.Color.fromCssColorString('#1e88a8'); // deep maritime teal
 const BUOY_MODEL = '/ship-models/buoy.glb';
-const BOAT_MODEL = '/ship-models/boat-row-small.glb';
+const BOAT_MODEL = '/ship-models/boat-house-a.glb';
 
 const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
 const MARINE_REFRESH_MS = 20 * 60_000; // sea temp/wave conditions change slowly
@@ -156,7 +156,7 @@ async function refreshStationConditions(station, entity) {
     const tempC = c.sea_surface_temperature;
     const waveM = c.wave_height;
     entity.model.color = tempColor(tempC);
-    entity.model.minimumPixelSize = 18 + Math.min(Number(waveM) || 0, 2) * 6; // rougher seas -> bigger boat
+    entity.model.minimumPixelSize = 32 + Math.min(Number(waveM) || 0, 2) * 8; // rougher seas -> bigger boat
     entity.label.text = Number.isFinite(tempC) ? `${tempC.toFixed(1)}°C` : station.name;
     entity.description = `
       <b>${station.name} tide station</b><br>
@@ -193,8 +193,8 @@ export function init(viewer) {
       position: Cesium.Cartesian3.fromDegrees(s.lon, s.lat),
       model: {
         uri: BOAT_MODEL,
-        minimumPixelSize: 18,
-        maximumScale: 60,
+        minimumPixelSize: 32,
+        maximumScale: 120,
         color: Cesium.Color.WHITE,
         colorBlendMode: Cesium.ColorBlendMode.MIX,
         colorBlendAmount: 0.55,
@@ -220,19 +220,8 @@ export function init(viewer) {
       position: Cesium.Cartesian3.fromDegrees(b.lon, b.lat),
       model: {
         uri: BUOY_MODEL,
-        minimumPixelSize: 20,
-        maximumScale: 40,
-      },
-      label: {
-        text: b.name,
-        font: '700 11px Nunito, sans-serif',
-        fillColor: Cesium.Color.WHITE,
-        showBackground: true,
-        backgroundColor: Cesium.Color.BLACK.withAlpha(0.75),
-        backgroundPadding: new Cesium.Cartesian2(5, 3),
-        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        pixelOffset: new Cesium.Cartesian2(0, -14),
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        minimumPixelSize: 36,
+        maximumScale: 80,
       },
       description: `
         <b>${b.name}</b> (NOWPHAS code ${b.code})<br>
