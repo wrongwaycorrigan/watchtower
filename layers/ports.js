@@ -1,9 +1,12 @@
 // Tokyo Bay Ports — port terminals and tide stations are static; NDBC
-// weather buoys are the one live piece, discovered once from NOAA's
-// station list, with readings fetched lazily on click.
+// weather buoys are discovered once from NOAA's station list, with
+// readings fetched lazily on click; live ship traffic (AIS) is its own
+// module, called into here the same way radio.js pulls in wspr.js.
 //
 // Port terminal coordinates are approximate placements, not survey-grade.
 // Tide station coordinates come from TidesAtlas's database.
+
+import * as ais from './ais.js';
 
 const NDBC_ACTIVE_STATIONS_URL = 'https://www.ndbc.noaa.gov/activestations.xml';
 const NDBC_REALTIME_BASE = 'https://www.ndbc.noaa.gov/data/realtime2';
@@ -197,13 +200,16 @@ export function init(viewer) {
     loadBuoyObservation(entity, stationId, stationName);
   };
   viewer.selectedEntityChanged.addEventListener(_selectedHandler);
+
+  ais.init(viewer);
 }
 
 export function setEnabled(enabled) {
   _dataSource.show = enabled;
   if (enabled) discoverBuoys();
+  ais.setEnabled(enabled);
 }
 
 export function getCount() {
-  return _dataSource.entities.values.length;
+  return _dataSource.entities.values.length + ais.getCount();
 }

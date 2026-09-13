@@ -17,8 +17,7 @@
     <button id="buildingsBtn" class="dock-btn dock-toggle" data-target="buildings-layer" title="3D Buildings">🏢</button>
     <button id="radioBtn" class="dock-btn dock-toggle" data-target="radio-panel" title="Radio (streaming + WSPR propagation + repeater sites)">📡</button>
     <button id="trafficBtn" class="dock-btn dock-toggle" data-target="traffic-panel" title="Air Traffic">✈️</button>
-    <button id="portsBtn" class="dock-btn dock-toggle" data-target="ports-panel" title="Tokyo Bay Ports">⚓</button>
-    <button id="aisBtn" class="dock-btn dock-toggle" data-target="ais-panel" title="Ship Traffic (AIS)">🚢</button>
+    <button id="portsBtn" class="dock-btn dock-toggle" data-target="ports-panel" title="Tokyo Bay Ports (+ live ship traffic)">⚓</button>
     <button id="sondeBtn" class="dock-btn dock-toggle" data-target="sonde-panel" title="Radiosondes">🎈</button>
     <button id="weatherBtn" class="dock-btn dock-toggle" data-target="weather-panel" title="Weather">🌤️</button>
     <button id="disasterBtn" class="dock-btn dock-toggle" data-target="disaster-panel" title="Disasters (earthquakes + volcanic)">⚠️</button>
@@ -41,18 +40,13 @@
   </div>
   <div id="ports-panel" class="control-panel hidden">
     <strong>Tokyo Bay Ports</strong>
-    <p class="source">Curated (static, no live feed)</p>
+    <p class="source">Curated ports/tides + NDBC buoys + aisstream.io ship traffic</p>
     <p class="count" id="ports-count">0</p>
   </div>
   <div id="sonde-panel" class="control-panel hidden">
     <strong>Radiosondes</strong>
     <p class="source">SondeHub</p>
     <p class="count" id="sonde-count">0</p>
-  </div>
-  <div id="ais-panel" class="control-panel hidden">
-    <strong>Ship Traffic</strong>
-    <p class="source">aisstream.io</p>
-    <p class="count" id="ais-count">0</p>
   </div>
   <div id="weather-panel" class="control-panel hidden">
     <strong>Weather</strong>
