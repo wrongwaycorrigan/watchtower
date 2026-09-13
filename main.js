@@ -184,6 +184,11 @@ async function initCesium() {
   document.getElementById('volume-slider').addEventListener('input', (e) => {
     radio.setVolume(Number(e.target.value) / 100);
   });
+
+  document.getElementById('muteBtn').addEventListener('click', function () {
+    const muted = radio.toggleMute();
+    this.textContent = muted ? '🔇' : '🔊';
+  });
 }
 
 // Decoupled from initCesium() — doesn't touch the viewer at all.

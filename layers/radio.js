@@ -1,14 +1,16 @@
-// Radio — internet radio stations (radio-browser.info) + WSPR beacon
-// propagation (wspr.live), combined under one button/panel/count. Same
-// pattern as disasters.js: two independent sources under one layer.
-// wspr.js keeps its own module; this file calls into it directly.
+// Radio — internet radio stations (radio-browser.info), WSPR beacon
+// propagation (wspr.live), and static amateur repeater sites, combined
+// under one button/panel/count. Same pattern as disasters.js: independent
+// sources under one layer, each keeping its own module.
 //
 // radio-browser.info is served from community mirrors (de1, nl1, at1, ...);
 // swap the host below if de1 is ever down.
 
 import * as wspr from './wspr.js';
+import * as repeaters from './repeaters.js';
 
 const STATIONS_URL = 'https://de1.api.radio-browser.info/json/stations/bycountry/Japan?hidebroken=true&order=clickcount&reverse=true&limit=40';
+const STATION_ALTITUDE_M = 2500; // visual raise only, not a real antenna height
 
 let _viewer = null;
 let _dataSource = null;
@@ -48,8 +50,19 @@ async function loadStations() {
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue; // most entries lack geo data — skip
       if (!s.url_resolved) continue;
 
+      const groundPos = Cesium.Cartesian3.fromDegrees(lon, lat, 0);
+      const raisedPos = Cesium.Cartesian3.fromDegrees(lon, lat, STATION_ALTITUDE_M);
+
       _dataSource.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(lon, lat),
+        polyline: {
+          positions: [groundPos, raisedPos],
+          width: 1,
+          material: Cesium.Color.WHITE.withAlpha(0.4),
+        },
+      });
+
+      _dataSource.entities.add({
+        position: raisedPos,
         billboard: {
           image: ICON,
           width: 22,
@@ -101,15 +114,28 @@ export function init(viewer) {
   viewer.selectedEntityChanged.addEventListener(_selectedHandler);
 
   wspr.init(viewer);
+  repeaters.init(viewer);
 }
 
 export function setVolume(volume01) {
   if (_audio) _audio.volume = Math.min(1, Math.max(0, volume01));
 }
 
+export function toggleMute() {
+  if (!_audio) return false;
+  _audio.muted = !_audio.muted;
+  return _audio.muted;
+}
+
+export function isMuted() {
+  return _audio ? _audio.muted : false;
+}
+
 export function getCount() {
-  const stationCount = _dataSource ? _dataSource.entities.values.length : 0;
-  return stationCount + wspr.getCount();
+  const stationCount = _dataSource
+    ? _dataSource.entities.values.filter((e) => e.properties?.streamUrl).length
+    : 0;
+  return stationCount + wspr.getCount() + repeaters.getCount();
 }
 
 export function setEnabled(enabled) {
@@ -121,4 +147,5 @@ export function setEnabled(enabled) {
     _audio.removeAttribute('src');
   }
   wspr.setEnabled(enabled);
+  repeaters.setEnabled(enabled);
 }

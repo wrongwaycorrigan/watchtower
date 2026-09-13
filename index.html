@@ -15,7 +15,7 @@
   <nav id="dockNavigation" class="dock-panel">
     <button id="globeBtn" class="dock-btn" title="Toggle Full Globe View">🌍</button>
     <button id="buildingsBtn" class="dock-btn dock-toggle" data-target="buildings-layer" title="3D Buildings">🏢</button>
-    <button id="radioBtn" class="dock-btn dock-toggle" data-target="radio-panel" title="Radio (streaming + WSPR propagation)">📡</button>
+    <button id="radioBtn" class="dock-btn dock-toggle" data-target="radio-panel" title="Radio (streaming + WSPR propagation + repeater sites)">📡</button>
     <button id="trafficBtn" class="dock-btn dock-toggle" data-target="traffic-panel" title="Air Traffic">✈️</button>
     <button id="portsBtn" class="dock-btn dock-toggle" data-target="ports-panel" title="Tokyo Bay Ports">⚓</button>
     <button id="sondeBtn" class="dock-btn dock-toggle" data-target="sonde-panel" title="Radiosondes">🎈</button>
@@ -30,7 +30,7 @@
   </div>
   <div id="radio-panel" class="control-panel hidden">
     <strong>Radio</strong>
-    <p class="source">radio-browser.info + wspr.live</p>
+    <p class="source">radio-browser.info + wspr.live + curated repeater sites</p>
     <p class="count" id="radio-count">0</p>
   </div>
   <div id="traffic-panel" class="control-panel hidden">
@@ -69,7 +69,7 @@
 
   <!-- Radio volume control — shown/hidden alongside the radio layer -->
   <div id="volume-control" class="hidden">
-    <span>🔊</span>
+    <button id="muteBtn" class="mute-btn" title="Mute/unmute">🔊</button>
     <input id="volume-slider" type="range" min="0" max="100" value="70" title="Radio volume">
   </div>
 
@@ -222,6 +222,15 @@
     }
 
     #volume-control.hidden { display: none !important; }
+
+    .mute-btn {
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      padding: 0;
+    }
 
     #volume-slider {
       width: 110px;
