@@ -4,37 +4,37 @@
 //
 // Vessels are assembled from two message types that arrive independently:
 // PositionReport (lat/lon/course/speed, frequent) and ShipStaticData
-// (name/callsign, rare). Entities are upserted by MMSI so a name that
-// arrives after the first position still gets attached to the right ship.
-// A vessel not heard from in STALE_MS is pruned — the bbox filter on the
-// server means a ship that leaves the area simply stops sending, it's
-// never told to us explicitly.
+// (name/callsign/ship type, rare). Entities are upserted by MMSI so data
+// that arrives after the first position still gets attached to the right
+// ship. A vessel not heard from in STALE_MS is pruned — the bbox filter
+// on the server means a ship that leaves the area simply stops sending,
+// it's never told to us explicitly.
+//
+// Rendered with real 3D models (see ship-models/NOTICE.txt for source and
+// license), picked by the ShipStaticData `Type` field (ITU-R M.1371 ship
+// and cargo type codes) once it arrives. Falls back to a generic hull
+// until then, since most position reports show up before the static data
+// does.
 
 const AIS_WS_URL = 'wss://stream.aisstream.io/v0/stream';
 const RECONNECT_DELAY_MS = 5000;
 const STALE_MS = 10 * 60_000;
 const PRUNE_INTERVAL_MS = 2 * 60_000;
+const MODELS_BASE = '/ship-models';
 
 // Tokyo Bay plus the Uraga Channel entrance.
 const BBOX = { minLat: 35.15, maxLat: 35.75, minLon: 139.6, maxLon: 140.15 };
 
-function shipIconDataUrl() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 24;
-  canvas.height = 24;
-  const ctx = canvas.getContext('2d');
-  ctx.translate(12, 12);
-  ctx.beginPath();
-  ctx.moveTo(0, -10);
-  ctx.lineTo(6, 7);
-  ctx.lineTo(0, 4);
-  ctx.lineTo(-6, 7);
-  ctx.closePath();
-  ctx.fillStyle = '#4fc3f7';
-  ctx.fill();
-  return canvas.toDataURL();
+function modelForType(type) {
+  if (type === 30) return 'boat-fishing-small.glb';
+  if (type === 36) return 'boat-sail-a.glb';
+  if (type === 37) return 'boat-speed-a.glb';
+  if (type === 52) return 'boat-tug-a.glb';
+  if (type >= 60 && type <= 69) return 'ship-ocean-liner-small.glb';
+  if (type >= 70 && type <= 79) return 'ship-cargo-a.glb';
+  if (type >= 80 && type <= 89) return 'ship-cargo-b.glb'; // no dedicated tanker model in this kit
+  return 'ship-small.glb'; // unknown or not yet received
 }
-const ICON = shipIconDataUrl();
 
 let _dataSource = null;
 let _socket = null;
@@ -62,23 +62,25 @@ function upsertVessel(mmsi, updates) {
   const label = v.name || `MMSI ${mmsi}`;
   const headingDeg = Number.isFinite(v.cog) ? v.cog : 0;
   const position = Cesium.Cartesian3.fromDegrees(v.lon, v.lat);
+  const hpr = new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(headingDeg), 0, 0);
+  const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+  const modelUri = `${MODELS_BASE}/${modelForType(v.shipType)}`;
   const description = describeVessel(mmsi, v);
 
   if (v.entity) {
     v.entity.position = position;
-    v.entity.billboard.rotation = Cesium.Math.toRadians(-headingDeg);
+    v.entity.orientation = orientation;
+    v.entity.model.uri = modelUri;
     v.entity.label.text = label;
     v.entity.description = description;
   } else {
     v.entity = _dataSource.entities.add({
       position,
-      billboard: {
-        image: ICON,
-        width: 18,
-        height: 18,
-        rotation: Cesium.Math.toRadians(-headingDeg),
-        alignedAxis: Cesium.Cartesian3.ZERO,
-        scaleByDistance: new Cesium.NearFarScalar(5_000, 1.0, 100_000, 0.4),
+      orientation,
+      model: {
+        uri: modelUri,
+        minimumPixelSize: 24,
+        maximumScale: 150,
       },
       label: {
         text: label,
@@ -88,7 +90,7 @@ function upsertVessel(mmsi, updates) {
         backgroundColor: Cesium.Color.BLACK.withAlpha(0.75),
         backgroundPadding: new Cesium.Cartesian2(4, 2),
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        pixelOffset: new Cesium.Cartesian2(0, -12),
+        pixelOffset: new Cesium.Cartesian2(0, -16),
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
         scaleByDistance: new Cesium.NearFarScalar(5_000, 1.0, 100_000, 0.4),
       },
@@ -114,8 +116,11 @@ function handleMessage(raw) {
     upsertVessel(mmsi, { lat: pr.Latitude, lon: pr.Longitude, cog: pr.Cog, sog: pr.Sog });
   } else if (msg.MessageType === 'ShipStaticData') {
     const sd = msg.Message?.ShipStaticData;
-    if (!sd?.Name) return;
-    upsertVessel(mmsi, { name: sd.Name.trim() });
+    if (!sd) return;
+    const updates = {};
+    if (sd.Name) updates.name = sd.Name.trim();
+    if (Number.isFinite(sd.Type)) updates.shipType = sd.Type;
+    if (Object.keys(updates).length) upsertVessel(mmsi, updates);
   }
 }
 
