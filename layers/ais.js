@@ -141,7 +141,14 @@ function upsertVessel(mmsi, updates) {
       model: {
         uri: modelUri,
         minimumPixelSize: 24,
-        maximumScale: 150,
+        // A low cap here (was 150) fights minimumPixelSize as you zoom in:
+        // Cesium scales the model up to hold a minimum on-screen size at a
+        // distance, then has to back that boost off as you approach: with
+        // a tight ceiling, the falloff outpaces how fast perspective is
+        // growing the model, so it visibly shrinks mid-zoom before
+        // settling back to true size close up. A generous ceiling (same
+        // idea as radiosondes.js's 15000) keeps that transition smooth.
+        maximumScale: 3000,
       },
       label: {
         text: label,
