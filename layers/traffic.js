@@ -40,6 +40,9 @@ function upsertAircraft(hex, ac) {
   const altM = altFt * 0.3048;
   const callsign = (ac.flight || ac.hex || '').trim();
   const position = Cesium.Cartesian3.fromDegrees(ac.lon, ac.lat, Math.max(altM, 50));
+  // ac.t (ICAO type, e.g. "A320") depends on the receiver's own database
+  // being populated - confirmed absent on at least one real install, so
+  // this suffix just won't show there. Harmless either way.
   const description = `<b>${callsign || 'Unknown'}</b>${ac.t ? ` (${ac.t})` : ''}<br>Altitude: ${Math.round(altFt)} ft`;
   const color = altFt > 10_000 ? HIGH_ALT_COLOR : LOW_ALT_COLOR;
   const now = Cesium.JulianDate.now();
@@ -92,7 +95,6 @@ async function refresh() {
 
   try {
     const res = await fetch(TAR1090_URL);
-    console.log('[Traffic] response status:', res.status);
     if (!res.ok) {
       const bodyText = await res.text().catch(() => '(could not read body)');
       console.warn('[Traffic] non-OK response, body was:', bodyText);
@@ -100,18 +102,12 @@ async function refresh() {
     }
     const data = await res.json();
     const aircraft = data.aircraft ?? data.ac ?? []; // "ac" fallback for other installs
-    console.log('[Traffic] aircraft in response:', aircraft.length);
-    if (aircraft.length) {
-      console.log('[Traffic] DIAGNOSTIC - raw fields of first aircraft:', aircraft[0]);
-      console.log('[Traffic] DIAGNOSTIC - type field (t) values seen:', aircraft.map((a) => a.t));
-    }
 
     for (const ac of aircraft) {
       if (!Number.isFinite(ac.lat) || !Number.isFinite(ac.lon) || !ac.hex) continue;
       upsertAircraft(ac.hex, ac);
     }
     pruneStaleAircraft();
-    console.log('[Traffic] aircraft tracked:', _aircraft.size);
   } catch (e) {
     console.error('[Traffic] fetch failed (check the Network tab - could be CORS, could be the receiver being offline):', e);
   }
