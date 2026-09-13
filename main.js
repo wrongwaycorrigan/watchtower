@@ -66,21 +66,26 @@ async function initCesium() {
   // No other layer depends on clock time, so this is safe globally.
   viewer.clock.shouldAnimate = true;
 
-  // CARTO Dark Matter instead of photoreal satellite imagery - a clean,
-  // stylized dark basemap that reads better zoomed in on the 3D buildings
-  // layer than a texture-heavy aerial photo does. Needs a free CARTO API
-  // key (see config.example.js) - their raster tiles started requiring
-  // one at some point; an unauthenticated request now comes back 403
-  // instead of the watermarked-but-working free tier older examples show.
+  // CARTO Dark Matter (default) / Positron (light, toggled via basemapBtn)
+  // instead of photoreal satellite imagery - a clean, stylized basemap
+  // that reads better zoomed in on the 3D buildings layer than a
+  // texture-heavy aerial photo does. Needs a free CARTO API key (see
+  // config.example.js) - their raster tiles started requiring one at some
+  // point; an unauthenticated request now comes back 403 instead of the
+  // watermarked-but-working free tier older examples show.
   if (!window.CARTO_API_KEY) {
     console.warn('[main] window.CARTO_API_KEY not set — basemap tiles will fail to load. See config.example.js.');
   }
-  const cartoDark = new Cesium.UrlTemplateImageryProvider({
-    url: `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=${window.CARTO_API_KEY ?? ''}`,
-    subdomains: ['a', 'b', 'c', 'd'],
-    credit: '© OpenStreetMap contributors © CARTO',
-  });
-  viewer.imageryLayers.addImageryProvider(cartoDark);
+  function cartoLayer(style) {
+    return viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+      url: `https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}.png?key=${window.CARTO_API_KEY ?? ''}`,
+      subdomains: ['a', 'b', 'c', 'd'],
+      credit: '© OpenStreetMap contributors © CARTO',
+    }));
+  }
+  const cartoDarkLayer = cartoLayer('dark_all');
+  const cartoLightLayer = cartoLayer('light_all');
+  cartoLightLayer.show = false;
 
   const logo = document.getElementById('cesium-logo');
   if (logo) logo.style.display = 'none';
@@ -160,6 +165,12 @@ async function initCesium() {
     this.classList.toggle('active', isGlobeView);
     viewer.camera.flyTo(isGlobeView ? GLOBE_VIEW : TOKYO_VIEW);
     iss.setEnabled(isGlobeView); // ISS only appears in globe view
+  });
+
+  document.getElementById('basemapBtn').addEventListener('click', function () {
+    const isLight = this.classList.toggle('active');
+    cartoLightLayer.show = isLight;
+    cartoDarkLayer.show = !isLight;
   });
 
   document.getElementById('buildingsBtn').addEventListener('click', async function () {
