@@ -8,9 +8,17 @@
 // fetches were always going to be blocked by the browser - confirmed by
 // testing directly, not just the earlier "untested" guess. NDBC's own
 // coverage near Japan/Korea was never actually confirmed either, so
-// there's no verified static data to fall back to - see the tide-station
-// precedent below for what "static, but for real" looks like when there
-// is one.
+// there's no verified static data to fall back to.
+//
+// BUOYS below is real static data instead: the one NOWPHAS (Nationwide
+// Ocean Wave information network for Ports and HArbourS, run by MLIT's
+// Port and Harbour Bureau) wave-observation station that actually falls
+// inside Tokyo Bay itself, out of that network's full 2024 nationwide
+// station list (77 stations total, most nowhere near the bay - nearby
+// coastline like Shimoda/Shimizu/Kashima isn't the bay itself, so it's
+// excluded rather than padding the count). Moored buoys like this hold a
+// fixed charted position (small swing radius around the anchor aside),
+// so a static point is a faithful representation, not a shortcut.
 //
 // Port terminal coordinates are approximate placements, not survey-grade.
 // Tide station coordinates come from TidesAtlas's database.
@@ -19,6 +27,7 @@ import * as ais from './ais.js';
 
 const PORT_COLOR = Cesium.Color.fromCssColorString('#1e88a8'); // deep maritime teal
 const TIDE_STATION_COLOR = Cesium.Color.fromCssColorString('#5ec8e0'); // lighter blue, distinct from port terminals
+const BUOY_MODEL = '/ship-models/buoy.glb';
 
 const PORTS = [
   {
@@ -87,6 +96,19 @@ const TIDE_STATIONS = [
   { name: 'Chiba', slug: 'chiba', lat: 35.56805, lon: 140.04555 },
 ];
 
+// NOWPHAS 2024 nationwide station list, code 217 - the one entry actually
+// inside Tokyo Bay. Coordinates converted from the source's DMS format
+// (35°18'13"N 139°44'50"E).
+const BUOYS = [
+  {
+    name: 'Daini Kaiho Wave Buoy',
+    code: 217,
+    lat: 35.303611,
+    lon: 139.747222,
+    description: 'NOWPHAS wave-observation buoy near the Daini Kaiho ("Second Sea Fort") artificial island in the Uraga Channel. Ultrasonic Doppler wave meter, water depth 31.8m, observing since March 2006.',
+  },
+];
+
 let _dataSource = null;
 
 export function init(viewer) {
@@ -107,6 +129,33 @@ export function init(viewer) {
       position: Cesium.Cartesian3.fromDegrees(s.lon, s.lat),
       point: { pixelSize: 8, color: TIDE_STATION_COLOR, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },
       description: `<b>${s.name} tide station</b><br>Position via TidesAtlas.`,
+    });
+  }
+
+  for (const b of BUOYS) {
+    _dataSource.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(b.lon, b.lat),
+      model: {
+        uri: BUOY_MODEL,
+        minimumPixelSize: 20,
+        maximumScale: 40,
+      },
+      label: {
+        text: b.name,
+        font: '700 11px Nunito, sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        showBackground: true,
+        backgroundColor: Cesium.Color.BLACK.withAlpha(0.75),
+        backgroundPadding: new Cesium.Cartesian2(5, 3),
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -14),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      },
+      description: `
+        <b>${b.name}</b> (NOWPHAS code ${b.code})<br>
+        ${b.description}<br>
+        <a href="https://nowphas.mlit.go.jp/" target="_blank" rel="noopener noreferrer">NOWPHAS</a>
+      `,
     });
   }
 
