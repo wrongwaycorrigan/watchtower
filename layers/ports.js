@@ -143,9 +143,29 @@ const LIGHTHOUSES = [
     name: 'Kannonzaki Lighthouse',
     lat: 35.25615,
     lon: 139.74522,
+    heightM: 56, // light's real height above sea level
+    characteristic: 'Fl W 15s 20M', // single white flash, 15s period, 20nm nominal range
     description: "Japan's first Western-style lighthouse, built 1869. Marks the western side of the Uraga Channel entrance to Tokyo Bay, at Yokosuka.",
   },
 ];
+
+// A real "Fl" (single-flash) light characteristic: on briefly, dark for
+// the rest of the period. flashMs is a representative on-duration - real
+// aid-to-navigation lists give the period exactly but not always the
+// flash length, so this is illustrative rather than to-the-millisecond
+// official timing.
+function lighthouseFlashColor(periodS, flashMs = 1200) {
+  const periodMs = periodS * 1000;
+  return new Cesium.CallbackProperty(() => {
+    const flashing = Date.now() % periodMs < flashMs;
+    return flashing ? Cesium.Color.WHITE : LIGHTHOUSE_COLOR.withAlpha(0.55);
+  }, false);
+}
+
+function lighthouseFlashSize(periodS, flashMs = 1200) {
+  const periodMs = periodS * 1000;
+  return new Cesium.CallbackProperty(() => (Date.now() % periodMs < flashMs ? 16 : 10), false);
+}
 
 let _dataSource = null;
 let _marineTimer = null;
@@ -203,10 +223,21 @@ export function init(viewer) {
   }
 
   for (const l of LIGHTHOUSES) {
+    const periodS = Number(l.characteristic?.match(/(\d+)s/)?.[1]) || 15;
     _dataSource.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(l.lon, l.lat),
-      point: { pixelSize: 10, color: LIGHTHOUSE_COLOR, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },
-      description: `<b>${l.name}</b><br>${l.description}`,
+      position: Cesium.Cartesian3.fromDegrees(l.lon, l.lat, l.heightM || 0),
+      point: {
+        pixelSize: lighthouseFlashSize(periodS),
+        color: lighthouseFlashColor(periodS),
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 1,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      },
+      description: `
+        <b>${l.name}</b><br>
+        ${l.description}<br>
+        Light: ${l.characteristic || 'unknown'}${l.heightM ? `, ${l.heightM}m above sea level` : ''}
+      `,
     });
   }
 
