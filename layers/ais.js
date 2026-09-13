@@ -84,8 +84,8 @@ function modelForType(type) {
   if (type === 52) return 'boat-tug-a.glb';
   if (type >= 60 && type <= 69) return 'ship-ocean-liner-small.glb';
   if (type >= 70 && type <= 79) return 'ship-cargo-a.glb';
-  if (type >= 80 && type <= 89) return 'ship-cargo-b.glb'; // no dedicated tanker model in this kit
-  return 'ship-small.glb'; // unknown or not yet received
+  if (type >= 80 && type <= 89) return 'ship-cargo-c.glb'; // no dedicated tanker model in this kit - closest hull shape
+  return 'ship-cargo-b.glb'; // unknown or not yet received - a plain hull, not ship-small.glb (which despite its name is actually a small sailboat with sail/flag meshes)
 }
 
 let _dataSource = null;
