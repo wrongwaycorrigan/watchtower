@@ -4,6 +4,8 @@ Watchtower is a 3D map of the Tokyo Bay area built on CesiumJS. It renders
 a stylized dark basemap, terrain, and Japan's PLATEAU 3D building models,
 then overlays several live data layers on top.
 
+<img width="980" height="719" alt="Screenshot 2026-09-27 124603" src="https://github.com/user-attachments/assets/80857d43-59c2-4e8a-8156-14ccb17c8cf5" />
+
 ## Layers
 
 - 3D Buildings: Japan PLATEAU (MLIT) textured building models
